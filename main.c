@@ -11,15 +11,7 @@ typedef struct node {
 } list_t;
 typedef list_t *ptr_list;
 
-typedef struct tree {
-    char* word;
-    struct tree *l;
-    struct tree *r;
-} tree_t;
-typedef tree_t *ptr_tree;
-
 ptr_list hash_table[TABLE_LENGTH];
-ptr_tree tree_dict = NULL;
 
 char* ignore;
 
@@ -44,7 +36,8 @@ void leggi_parole(){
 
 void nuova_partita(){
     char p[k+1], r[k+1], res[k+1]; // r: riferimento, p: parola corrente, res: output
-    int n, i, j;
+    int n, i, j, refact;
+    int count_r[64] = {0}, count_r_tmp[64] = {0};
     bool won = false;
     res[k] = '\0';
 
@@ -52,6 +45,10 @@ void nuova_partita(){
 
     if(!scanf("%d\n", &n)){
         return;
+    }
+
+    for(i = 0; i < k; i++){
+        count_r[refactor(r[i])]++;
     }
 
     for(j = 0; j < n; j++){
@@ -76,15 +73,24 @@ void nuova_partita(){
                 won = true;
                 break;
             } else if(check_dizionario(p)){
+                for(i = 0; i < 64; i++){
+                    count_r_tmp[i] = count_r[i];
+                }
+
                 for(i = 0; i < k; i++){
+                    refact = refactor(p[i]);
+
                     if(p[i] == r[i]){
                         res[i] = '+';
+                        count_r_tmp[refact]--;
                     } else {
                         //TODO
                     }
                 }
 
                 printf("%s\n", res);
+
+                //memset(count_p, 0, sizeof(count_p));
             } else {
                 printf("not_exists\n");
                 j--;
@@ -154,16 +160,6 @@ int hash(char* string){
 void aggiungi_parola(char* string){
     int hash_tmp = hash(string);
     ptr_list list_tmp;
-
-    ptr_tree x, y;
-    x = tree_dict;
-    while(x != NULL){
-        y = x;
-        if(strcmp(string, x->word) < 0)
-            x = x->l;
-        else
-            x = x->r;
-    }
 
     list_tmp = hash_table[hash_tmp];
 
