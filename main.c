@@ -36,11 +36,22 @@ void leggi_parole(){
 
 void nuova_partita(){
     char p[k+1], r[k+1], res[k+1]; // r: riferimento, p: parola corrente, res: output
+    res[k] = '\0';
+
     int n, i, j, refact;
     int count_r[64] = {0}, count_r_tmp[64] = {0};
     bool won = false;
     char x;
-    res[k] = '\0';
+
+    char lettere_esatte[k];
+    memset(lettere_esatte, 0, sizeof(lettere_esatte));
+    bool non_appartiene[64] = {[0 ... 63] = false}; // true se l'i-esimo simbolo NON appartiene a r
+    bool apparso[64] = {[0 ... 63] = false};
+    bool non_qui[64 * k];
+    memset(non_qui, false, sizeof(non_qui));
+    int num_minimo[64] = {0};
+    int num_minimo_tmp[64] = {0};
+    int num_esatto[64] = {[0 ... 63] = -1};
 
     ignore = fgets(r, k+1, stdin);
 
@@ -83,10 +94,47 @@ void nuova_partita(){
                     if(p[i] == r[i]){
                         res[i] = '+';
                         count_r_tmp[refact]--;
-                    } else {
-                        //TODO
+
+                        lettere_esatte[i] = p[i];
+                        apparso[refact] = true;
+                        num_minimo_tmp[refact]++;
                     }
                 }
+
+                for(i = 0; i < k; i++){
+                    refact = refactor(p[i]);
+
+                    if(lettere_esatte[i] != p[i]){
+                        if(count_r_tmp[refact] > 0){
+                            res[i] = '|';
+                            count_r_tmp[refact]--;
+
+                            apparso[refact] = true;
+                            non_qui[i * 64 + refact] = true;
+                            num_minimo_tmp[refact]++;
+                        } else {
+                            res[i] = '/';
+
+                            if(!apparso[refact]){
+                                non_appartiene[refact] = true;
+                            } else {
+                                num_esatto[refact] = num_minimo_tmp[refact];
+                            }
+
+                            non_qui[i * 64 + refact] = true;
+                        }
+                    }
+                }
+
+                for(i = 0; i < 64; i++){
+                    if(num_minimo_tmp[i] > num_minimo[i]){
+                        num_minimo[i] = num_minimo_tmp[i];
+                    }
+
+                    num_minimo_tmp[i] = 0;
+                }
+
+                //TODO
 
                 printf("%s\n", res);
             } else {
