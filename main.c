@@ -3,34 +3,34 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define TABLE_LENGTH 1000
-
 typedef struct node {
-    char* word;
-    struct node *next;
-} list_t;
-typedef list_t *ptr_list;
+    char* key;
+    struct node *left;
+    struct node *right;
+} node_t;
+typedef node_t *ptr_tree;
 
-ptr_list hash_table[TABLE_LENGTH];
+ptr_tree tree = NULL;
 
 char* ignore;
 
 int k; // lunghezza delle stringhe
 
 int refactor(char);
-int hash(char*);
-void aggiungi_parola(char*);
-bool check_dizionario(char*);
+void aggiungi_albero(char*);
+bool check_albero(ptr_tree, char*);
 bool stringhe_uguali(char*, char*);
+void stampa_inorder(ptr_tree);
 
 void leggi_parole(){
-    char read[k + 1];
+    char* read;
 
     do {
+        read = (char*) malloc(sizeof(char) * (k+1));
         ignore = fgets(read, k+1, stdin);
-        while(getchar() != '\n');
+        while(getchar_unlocked() != '\n');
 
-        aggiungi_parola(read);
+        if(read[0] != '+') aggiungi_albero(read);
     } while(read[0] != '+');
 }
 
@@ -39,6 +39,7 @@ void nuova_partita(){
     int n, i, j, refact;
     int count_r[64] = {0}, count_r_tmp[64] = {0};
     bool won = false;
+    char x;
     res[k] = '\0';
 
     ignore = fgets(r, k+1, stdin);
@@ -53,7 +54,7 @@ void nuova_partita(){
 
     for(j = 0; j < n; j++){
         ignore = fgets(p, k+1, stdin);
-        while(getchar() != '\n');
+        while(getchar_unlocked() != '\n');
 
         if(p[0] == '+' && p[1] == 's') { //+stampa_filtrate
             //TODO
@@ -65,14 +66,13 @@ void nuova_partita(){
             if(stringhe_uguali(p, r)){
                 printf("ok\n");
 
-                char x;
                 do{
-                    x = getchar();
+                    x = getchar_unlocked();
                 } while(x != '+' && x != EOF);
 
                 won = true;
                 break;
-            } else if(check_dizionario(p)){
+            } else if(check_albero(tree, p)){
                 for(i = 0; i < 64; i++){
                     count_r_tmp[i] = count_r[i];
                 }
@@ -89,8 +89,6 @@ void nuova_partita(){
                 }
 
                 printf("%s\n", res);
-
-                //memset(count_p, 0, sizeof(count_p));
             } else {
                 printf("not_exists\n");
                 j--;
@@ -100,7 +98,7 @@ void nuova_partita(){
 
     if(!won){
         printf("ko\n");
-        getchar();
+        getchar_unlocked();
     }
 }
 
@@ -113,9 +111,9 @@ int main(){
 
     nuova_partita();
 
-    x = (char) getchar();
+    x = (char) getchar_unlocked();
     while(x != EOF){
-        while(getchar() != '\n');
+        while(getchar_unlocked() != '\n');
 
         if(x == 'n'){
             nuova_partita();
@@ -123,7 +121,7 @@ int main(){
             leggi_parole();
         }
 
-        x = (char) getchar();
+        x = (char) getchar_unlocked();
     }
 
     return 0;
@@ -145,53 +143,54 @@ int refactor(char x){
     return 0;
 }
 
-int hash(char* string){
-    unsigned int i, ris;
+void aggiungi_albero(char* string){
+    ptr_tree x = tree, y = NULL, z;
 
-    ris = 1;
+    z = (ptr_tree) malloc(sizeof(node_t));
+    z->key = string;
+    z->left = NULL;
+    z->right = NULL;
 
-    for(i = 0; i < k; i++){
-        ris = ris*13 + refactor(string[i]);
-    }
-
-    return (ris - k) % TABLE_LENGTH;
-}
-
-void aggiungi_parola(char* string){
-    int hash_tmp = hash(string);
-    ptr_list list_tmp;
-
-    list_tmp = hash_table[hash_tmp];
-
-    if(list_tmp == NULL){
-        hash_table[hash_tmp] = (ptr_list) malloc(sizeof(list_t));
-        hash_table[hash_tmp]->word = (char*) malloc((k+1) * sizeof(char));
-        hash_table[hash_tmp]->next = NULL;
-        strcpy(hash_table[hash_tmp]->word, string);
-    } else {
-        while(list_tmp->next != NULL){
-            list_tmp = list_tmp->next;
-        }
-        list_tmp->next = (ptr_list) malloc(sizeof (list_t));
-        list_tmp->next->word = (char *) malloc((k+1) * sizeof(char));
-        list_tmp->next->next = NULL;
-        strcpy(list_tmp->next->word, string);
-    }
-}
-
-bool check_dizionario(char* string){
-    int hash_tmp = hash(string);
-    ptr_list list_tmp = hash_table[hash_tmp];
-
-    do {
-        if(stringhe_uguali(list_tmp->word, string)){
-            return true;
+    while(x != NULL){
+        y = x;
+        if(strcmp(z->key, x->key) < 0){
+            x = x->left;
         } else {
-            list_tmp = list_tmp->next;
+            x = x->right;
         }
-    } while(list_tmp != NULL);
+    }
 
-    return false;
+    if(y == NULL){
+        tree = z;
+    } else if(strcmp(z->key, y->key) < 0) {
+        y->left = z;
+    } else {
+        y->right = z;
+    }
+}
+
+bool check_albero(ptr_tree x, char* string) {
+    if (x == NULL) {
+        return false;
+    } else {
+        int cmp = strcmp(string, x->key);
+
+        if (cmp == 0) {
+            return true;
+        } else if (cmp < 0) {
+            return check_albero(x->left, string);
+        } else {
+            return check_albero(x->right, string);
+        }
+    }
+}
+
+void stampa_inorder(ptr_tree x){
+    if(x != NULL){
+        stampa_inorder(x->left);
+        printf("%s\n", x->key);
+        stampa_inorder(x->right);
+    }
 }
 
 bool stringhe_uguali(char* s1, char* s2){
