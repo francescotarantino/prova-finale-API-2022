@@ -178,7 +178,7 @@ void nuova_partita(){
 
 int check_vincoli(ptr_tree x, vincolo_t *vincoli){
     bool check = true;
-    int refact, j, i, count;
+    int refact, j;
 
     if(x == NULL){
         return 0;
@@ -198,16 +198,18 @@ int check_vincoli(ptr_tree x, vincolo_t *vincoli){
         }
     }
 
-    for(j = 0; j < 64 && check; j++){
-        count = 0;
-        for(i = 0; i < k; i++){
-            if(j == refactor(x->key[i])) count++;
+    if(check){
+        int count[64] = {0};
+        for(j = 0; j < k; j++){
+            count[refactor(x->key[j])]++;
         }
 
-        if(vincoli->num_esatto[j] != 0){
-            if(count != vincoli->num_esatto[j]) check = false;
-        } else {
-            if(count < vincoli->num_minimo[j]) check = false;
+        for(j = 0; j < 64 && check; j++){
+            if(vincoli->num_esatto[j] != 0){
+                if(count[j] != vincoli->num_esatto[j]) check = false;
+            } else {
+                if(count[j] < vincoli->num_minimo[j]) check = false;
+            }
         }
     }
 
