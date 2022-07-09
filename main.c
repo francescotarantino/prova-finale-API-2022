@@ -47,7 +47,7 @@ void leggi_parole(){
     do {
         read = (char*) malloc(sizeof(char) * (k+1));
         ignore = fgets(read, k+1, stdin);
-        while(getchar_unlocked() != '\n');
+        if(k+1 < 16) while(getchar_unlocked() != '\n');
 
         if(read[0] != '+') aggiungi_albero(read);
     } while(read[0] != '+');
