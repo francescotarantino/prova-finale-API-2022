@@ -5,12 +5,22 @@
 
 typedef struct node {
     char* key;
+    bool check;
     struct node *left;
     struct node *right;
 } node_t;
-typedef node_t *ptr_tree;
 
+typedef node_t *ptr_tree;
 ptr_tree tree = NULL;
+
+typedef struct {
+    char* lettere_esatte;
+    bool non_appartiene[64];
+    bool apparso[64];
+    bool* non_qui;
+    int num_minimo[64];
+    int num_esatto[64];
+} vincolo_t;
 
 char* ignore;
 
@@ -21,6 +31,15 @@ void aggiungi_albero(char*);
 bool check_albero(ptr_tree, char*);
 bool stringhe_uguali(char*, char*);
 void stampa_inorder(ptr_tree);
+int check_vincoli(ptr_tree, vincolo_t*);
+
+void check_true(ptr_tree x){
+    if(x != NULL){
+        x->check = true;
+        check_true(x->left);
+        check_true(x->right);
+    }
+}
 
 void leggi_parole(){
     char* read;
@@ -43,15 +62,17 @@ void nuova_partita(){
     bool won = false;
     char x;
 
-    char lettere_esatte[k];
-    memset(lettere_esatte, 0, sizeof(lettere_esatte));
-    bool non_appartiene[64] = {[0 ... 63] = false}; // true se l'i-esimo simbolo NON appartiene a r
-    bool apparso[64] = {[0 ... 63] = false};
-    bool non_qui[64 * k];
-    memset(non_qui, false, sizeof(non_qui));
-    int num_minimo[64] = {0};
+    vincolo_t vincoli;
+    vincoli.lettere_esatte = malloc(sizeof(char) * k);
+    memset(vincoli.lettere_esatte, 0, sizeof(char) * k);
+    memset(vincoli.non_appartiene, false, sizeof(vincoli.non_appartiene));
+    memset(vincoli.apparso, false, sizeof(vincoli.apparso));
+    vincoli.non_qui = malloc(sizeof(bool) * 64 * k);
+    memset(vincoli.non_qui, false, sizeof(bool) * 64 * k);
+    memset(vincoli.num_minimo, 0, sizeof(vincoli.num_minimo));
+    memset(vincoli.num_esatto, 0, sizeof(vincoli.num_esatto));
+
     int num_minimo_tmp[64] = {0};
-    int num_esatto[64] = {[0 ... 63] = -1};
 
     ignore = fgets(r, k+1, stdin);
 
@@ -68,10 +89,13 @@ void nuova_partita(){
         while(getchar_unlocked() != '\n');
 
         if(p[0] == '+' && p[1] == 's') { //+stampa_filtrate
-            //TODO
+            stampa_inorder(tree);
+
             j--;
         } else if(p[0] == '+' && p[1] == 'i') { //+inserisci_inizio
             leggi_parole();
+            check_vincoli(tree, &vincoli);
+
             j--;
         } else {
             if(stringhe_uguali(p, r)){
@@ -95,8 +119,8 @@ void nuova_partita(){
                         res[i] = '+';
                         count_r_tmp[refact]--;
 
-                        lettere_esatte[i] = p[i];
-                        apparso[refact] = true;
+                        vincoli.lettere_esatte[i] = p[i];
+                        vincoli.apparso[refact] = true;
                         num_minimo_tmp[refact]++;
                     }
                 }
@@ -104,39 +128,37 @@ void nuova_partita(){
                 for(i = 0; i < k; i++){
                     refact = refactor(p[i]);
 
-                    if(lettere_esatte[i] != p[i]){
+                    if(vincoli.lettere_esatte[i] != p[i]){
                         if(count_r_tmp[refact] > 0){
                             res[i] = '|';
                             count_r_tmp[refact]--;
 
-                            apparso[refact] = true;
-                            non_qui[i * 64 + refact] = true;
+                            vincoli.apparso[refact] = true;
+                            vincoli.non_qui[i * 64 + refact] = true;
                             num_minimo_tmp[refact]++;
                         } else {
                             res[i] = '/';
 
-                            if(!apparso[refact]){
-                                non_appartiene[refact] = true;
+                            if(!vincoli.apparso[refact]){
+                                vincoli.non_appartiene[refact] = true;
                             } else {
-                                num_esatto[refact] = num_minimo_tmp[refact];
+                                vincoli.num_esatto[refact] = num_minimo_tmp[refact];
                             }
 
-                            non_qui[i * 64 + refact] = true;
+                            vincoli.non_qui[i * 64 + refact] = true;
                         }
                     }
                 }
 
                 for(i = 0; i < 64; i++){
-                    if(num_minimo_tmp[i] > num_minimo[i]){
-                        num_minimo[i] = num_minimo_tmp[i];
+                    if(num_minimo_tmp[i] > vincoli.num_minimo[i]){
+                        vincoli.num_minimo[i] = num_minimo_tmp[i];
                     }
 
                     num_minimo_tmp[i] = 0;
                 }
 
-                //TODO
-
-                printf("%s\n", res);
+                printf("%s\n%d\n", res, check_vincoli(tree, &vincoli));
             } else {
                 printf("not_exists\n");
                 j--;
@@ -147,6 +169,53 @@ void nuova_partita(){
     if(!won){
         printf("ko\n");
         getchar_unlocked();
+    }
+
+    check_true(tree);
+    free(vincoli.lettere_esatte);
+    free(vincoli.non_qui);
+}
+
+int check_vincoli(ptr_tree x, vincolo_t *vincoli){
+    bool check = true;
+    int refact, j, i, count;
+
+    if(x == NULL){
+        return 0;
+    }
+
+    check = x->check;
+
+    for(j = 0; j < k && check; j++){
+        refact = refactor(x->key[j]);
+
+        if(vincoli->lettere_esatte[j] != '\0' && vincoli->lettere_esatte[j] != x->key[j]){
+            check = false;
+        } else if(vincoli->non_appartiene[refact]){
+            check = false;
+        } else if(vincoli->non_qui[j * 64 + refact]){
+            check = false;
+        }
+    }
+
+    for(j = 0; j < 64 && check; j++){
+        count = 0;
+        for(i = 0; i < k; i++){
+            if(j == refactor(x->key[i])) count++;
+        }
+
+        if(vincoli->num_esatto[j] != 0){
+            if(count != vincoli->num_esatto[j]) check = false;
+        } else {
+            if(count < vincoli->num_minimo[j]) check = false;
+        }
+    }
+
+    x->check = check;
+    if(check){
+        return 1 + check_vincoli(x->right, vincoli) + check_vincoli(x->left, vincoli);
+    } else {
+        return check_vincoli(x->right, vincoli) + check_vincoli(x->left, vincoli);
     }
 }
 
@@ -161,7 +230,7 @@ int main(){
 
     x = (char) getchar_unlocked();
     while(x != EOF){
-        while(getchar_unlocked() != '\n');
+        if(x != '+') while(getchar_unlocked() != '\n');
 
         if(x == 'n'){
             nuova_partita();
@@ -196,6 +265,7 @@ void aggiungi_albero(char* string){
 
     z = (ptr_tree) malloc(sizeof(node_t));
     z->key = string;
+    z->check = true;
     z->left = NULL;
     z->right = NULL;
 
@@ -236,7 +306,8 @@ bool check_albero(ptr_tree x, char* string) {
 void stampa_inorder(ptr_tree x){
     if(x != NULL){
         stampa_inorder(x->left);
-        printf("%s\n", x->key);
+        if(x->check)
+            printf("%s\n", x->key);
         stampa_inorder(x->right);
     }
 }
