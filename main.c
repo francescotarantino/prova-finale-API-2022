@@ -93,10 +93,20 @@ void create_inorder_list(ptr_tree x){
     }
 }
 
+void delete_from_list(ptr_list x, ptr_list prev){
+    if(prev != NULL){
+        prev->next = x->next;
+    } else {
+        list = x->next;
+    }
+
+    free(x);
+}
+
 int check_vincoli(vincolo_t *vincoli){
     bool check = true;
     int refact, j, sum = 0;
-    ptr_list x = list;
+    ptr_list x = list, prev = NULL, tmp;
 
     while(x != NULL){
         for(j = 0; j < k && check; j++){
@@ -128,9 +138,15 @@ int check_vincoli(vincolo_t *vincoli){
 
         if(check){
             sum++;
+            prev = x;
+            x = x->next;
         } else {
-            //TODO cancella dalla lista
+            tmp = x->next;
+            delete_from_list(x, prev);
+            x = tmp;
         }
+
+        check = true;
     }
 
     return sum;
@@ -179,6 +195,14 @@ void nuova_partita(){
             j--;
         } else if(p[0] == '+' && p[1] == 'i') { //+inserisci_inizio
             leggi_parole();
+
+            ptr_list tmp;
+            while(list != NULL){
+                tmp = list;
+                list = list->next;
+                free(tmp);
+            }
+            create_inorder_list(tree);
             check_vincoli(&vincoli);
 
             j--;
@@ -251,7 +275,20 @@ void nuova_partita(){
         }
     }
 
-    //todo finale più cancella tutta la lista
+    if(!won){
+        printf("ko\n");
+        getchar_unlocked();
+    }
+
+    free(vincoli.lettere_esatte);
+    free(vincoli.non_qui);
+
+    ptr_list tmp;
+    while(list != NULL){
+        tmp = list;
+        list = list->next;
+        free(tmp);
+    }
 }
 
 int main(){
@@ -326,9 +363,9 @@ bool check_presenza_albero(ptr_tree x, char* string) {
         if (cmp == 0) {
             return true;
         } else if (cmp < 0) {
-            return check_albero(x->left, string);
+            return check_presenza_albero(x->left, string);
         } else {
-            return check_albero(x->right, string);
+            return check_presenza_albero(x->right, string);
         }
     }
 }
