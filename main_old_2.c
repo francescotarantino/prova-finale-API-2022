@@ -5,18 +5,13 @@
 
 typedef struct node {
     char* key;
+    bool check;
     struct node *left;
     struct node *right;
 } node_t;
+
 typedef node_t *ptr_tree;
 ptr_tree tree = NULL;
-
-typedef struct node_list {
-    char* key;
-    struct node_list *next;
-} node_list_t;
-typedef node_list_t *ptr_list;
-ptr_list list = NULL, last = NULL;
 
 typedef struct {
     char* lettere_esatte;
@@ -27,36 +22,22 @@ typedef struct {
     int num_esatto[64];
 } vincolo_t;
 
-int k;
 char* ignore;
+
+int k; // lunghezza delle stringhe
+
 int refactor(char);
+void aggiungi_albero(char*);
+bool check_albero(ptr_tree, char*);
 bool stringhe_uguali(char*, char*);
-void print_list();
-bool check_presenza_albero(ptr_tree, char*);
+void stampa_inorder(ptr_tree);
+int check_vincoli(ptr_tree, vincolo_t*);
 
-void aggiungi_albero(char* string){
-    ptr_tree x = tree, y = NULL, z;
-
-    z = (ptr_tree) malloc(sizeof(node_t));
-    z->key = string;
-    z->left = NULL;
-    z->right = NULL;
-
-    while(x != NULL){
-        y = x;
-        if(strcmp(z->key, x->key) < 0){
-            x = x->left;
-        } else {
-            x = x->right;
-        }
-    }
-
-    if(y == NULL){
-        tree = z;
-    } else if(strcmp(z->key, y->key) < 0) {
-        y->left = z;
-    } else {
-        y->right = z;
+void check_true(ptr_tree x){
+    if(x != NULL){
+        x->check = true;
+        check_true(x->left);
+        check_true(x->right);
     }
 }
 
@@ -72,73 +53,7 @@ void leggi_parole(){
     } while(read[0] != '+');
 }
 
-void create_inorder_list(ptr_tree x){
-    if(x != NULL){
-        create_inorder_list(x->left);
-
-        ptr_list new;
-        new = (ptr_list) malloc(sizeof(node_list_t));
-        new->key = x->key;
-        new->next = NULL;
-
-        if(list == NULL){
-            list = new;
-            last = new;
-        } else {
-            last->next = new;
-            last = new;
-        }
-
-        create_inorder_list(x->right);
-    }
-}
-
-int check_vincoli(vincolo_t *vincoli){
-    bool check = true;
-    int refact, j, sum = 0;
-    ptr_list x = list;
-
-    while(x != NULL){
-        for(j = 0; j < k && check; j++){
-            refact = refactor(x->key[j]);
-
-            if(vincoli->lettere_esatte[j] != '\0' && vincoli->lettere_esatte[j] != x->key[j]){
-                check = false;
-            } else if(vincoli->non_appartiene[refact]){
-                check = false;
-            } else if(vincoli->non_qui[j * 64 + refact]){
-                check = false;
-            }
-        }
-
-        if(check){
-            int count[64] = {0};
-            for(j = 0; j < k; j++){
-                count[refactor(x->key[j])]++;
-            }
-
-            for(j = 0; j < 64 && check; j++){
-                if(vincoli->num_esatto[j] != 0){
-                    if(count[j] != vincoli->num_esatto[j]) check = false;
-                } else {
-                    if(count[j] < vincoli->num_minimo[j]) check = false;
-                }
-            }
-        }
-
-        if(check){
-            sum++;
-        } else {
-            //TODO cancella dalla lista
-        }
-    }
-
-    return sum;
-}
-
 void nuova_partita(){
-    create_inorder_list(tree);
-
     char p[k+1], r[k+1], res[k+1]; // r: riferimento, p: parola corrente, res: output
     res[k] = '\0';
 
@@ -174,12 +89,12 @@ void nuova_partita(){
         while(getchar_unlocked() != '\n');
 
         if(p[0] == '+' && p[1] == 's') { //+stampa_filtrate
-            print_list(tree);
+            stampa_inorder(tree);
 
             j--;
         } else if(p[0] == '+' && p[1] == 'i') { //+inserisci_inizio
             leggi_parole();
-            check_vincoli(&vincoli);
+            check_vincoli(tree, &vincoli);
 
             j--;
         } else {
@@ -192,7 +107,7 @@ void nuova_partita(){
 
                 won = true;
                 break;
-            } else if(check_presenza_albero(tree, p)){
+            } else if(check_albero(tree, p)){
                 for(i = 0; i < 64; i++){
                     count_r_tmp[i] = count_r[i];
                 }
@@ -243,7 +158,7 @@ void nuova_partita(){
                     num_minimo_tmp[i] = 0;
                 }
 
-                printf("%s\n%d\n", res, check_vincoli(&vincoli));
+                printf("%s\n%d\n", res, check_vincoli(tree, &vincoli));
             } else {
                 printf("not_exists\n");
                 j--;
@@ -251,7 +166,59 @@ void nuova_partita(){
         }
     }
 
-    //todo finale più cancella tutta la lista
+    if(!won){
+        printf("ko\n");
+        getchar_unlocked();
+    }
+
+    check_true(tree);
+    free(vincoli.lettere_esatte);
+    free(vincoli.non_qui);
+}
+
+int check_vincoli(ptr_tree x, vincolo_t *vincoli){
+    bool check = true;
+    int refact, j;
+
+    if(x == NULL){
+        return 0;
+    }
+
+    check = x->check;
+
+    for(j = 0; j < k && check; j++){
+        refact = refactor(x->key[j]);
+
+        if(vincoli->lettere_esatte[j] != '\0' && vincoli->lettere_esatte[j] != x->key[j]){
+            check = false;
+        } else if(vincoli->non_appartiene[refact]){
+            check = false;
+        } else if(vincoli->non_qui[j * 64 + refact]){
+            check = false;
+        }
+    }
+
+    if(check){
+        int count[64] = {0};
+        for(j = 0; j < k; j++){
+            count[refactor(x->key[j])]++;
+        }
+
+        for(j = 0; j < 64 && check; j++){
+            if(vincoli->num_esatto[j] != 0){
+                if(count[j] != vincoli->num_esatto[j]) check = false;
+            } else {
+                if(count[j] < vincoli->num_minimo[j]) check = false;
+            }
+        }
+    }
+
+    x->check = check;
+    if(check){
+        return 1 + check_vincoli(x->right, vincoli) + check_vincoli(x->left, vincoli);
+    } else {
+        return check_vincoli(x->right, vincoli) + check_vincoli(x->left, vincoli);
+    }
 }
 
 int main(){
@@ -295,29 +262,34 @@ int refactor(char x){
     return 0;
 }
 
-bool stringhe_uguali(char* s1, char* s2){
-    bool check = true;
+void aggiungi_albero(char* string){
+    ptr_tree x = tree, y = NULL, z;
 
-    while((*s1 != '\0' || *s2 != '\0') && check){
-        check = *s1 == *s2;
+    z = (ptr_tree) malloc(sizeof(node_t));
+    z->key = string;
+    z->check = true;
+    z->left = NULL;
+    z->right = NULL;
 
-        s1++;
-        s2++;
+    while(x != NULL){
+        y = x;
+        if(strcmp(z->key, x->key) < 0){
+            x = x->left;
+        } else {
+            x = x->right;
+        }
     }
 
-    return check;
-}
-
-void print_list(){
-    ptr_list tmp = list;
-
-    while(tmp != NULL){
-        printf("%s\n", tmp->key);
-        tmp = tmp->next;
+    if(y == NULL){
+        tree = z;
+    } else if(strcmp(z->key, y->key) < 0) {
+        y->left = z;
+    } else {
+        y->right = z;
     }
 }
 
-bool check_presenza_albero(ptr_tree x, char* string) {
+bool check_albero(ptr_tree x, char* string) {
     if (x == NULL) {
         return false;
     } else {
@@ -331,4 +303,26 @@ bool check_presenza_albero(ptr_tree x, char* string) {
             return check_albero(x->right, string);
         }
     }
+}
+
+void stampa_inorder(ptr_tree x){
+    if(x != NULL){
+        stampa_inorder(x->left);
+        if(x->check)
+            printf("%s\n", x->key);
+        stampa_inorder(x->right);
+    }
+}
+
+bool stringhe_uguali(char* s1, char* s2){
+    bool check = true;
+
+    while((*s1 != '\0' || *s2 != '\0') && check){
+        check = *s1 == *s2;
+
+        s1++;
+        s2++;
+    }
+
+    return check;
 }
