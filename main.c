@@ -105,7 +105,7 @@ void delete_from_list(ptr_list x, ptr_list prev){
 
 int check_vincoli(vincolo_t *vincoli){
     bool check = true;
-    int refact, j, sum = 0;
+    int refact, j, i, sum = 0, count;
     ptr_list x = list, prev = NULL, tmp;
 
     while(x != NULL){
@@ -122,16 +122,17 @@ int check_vincoli(vincolo_t *vincoli){
         }
 
         if(check){
-            int count[64] = {0};
-            for(j = 0; j < k; j++){
-                count[refactor(x->key[j])]++;
-            }
-
             for(j = 0; j < 64 && check; j++){
+                count = 0;
+
+                for(i = 0; i < k; i++){
+                    if(refactor(x->key[i]) == j) count++;
+                }
+
                 if(vincoli->num_esatto[j] != 0){
-                    if(count[j] != vincoli->num_esatto[j]) check = false;
+                    if(count != vincoli->num_esatto[j]) check = false;
                 } else {
-                    if(count[j] < vincoli->num_minimo[j]) check = false;
+                    if(count < vincoli->num_minimo[j]) check = false;
                 }
             }
         }
@@ -300,17 +301,17 @@ int main(){
 
     nuova_partita();
 
-    x = (char) getchar_unlocked();
-    while(x != EOF){
-        if(x != '+') while(getchar_unlocked() != '\n');
-
+    x = getchar_unlocked();
+    while(x != '\n' && x != EOF) {
         if(x == 'n'){
+            while(getchar_unlocked() != '\n');
             nuova_partita();
         } else if(x == 'i'){
+            while(getchar_unlocked() != '\n');
             leggi_parole();
         }
 
-        x = (char) getchar_unlocked();
+        x = getchar_unlocked();
     }
 
     return 0;
