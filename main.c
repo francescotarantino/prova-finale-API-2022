@@ -33,6 +33,39 @@ int refactor(char);
 bool stringhe_uguali(char*, char*);
 void print_list();
 bool check_presenza_albero(ptr_tree, char*);
+void aggiungi_lista_inorder(char*);
+
+bool check_parola(vincolo_t *vincoli, char* word){
+    int i, j, refact, count;
+
+    for(j = 0; j < k; j++){
+        refact = refactor(word[j]);
+
+        if(vincoli->lettere_esatte[j] != '\0' && vincoli->lettere_esatte[j] != word[j]){
+            return false;
+        } else if(vincoli->non_appartiene[refact]){
+            return false;
+        } else if(vincoli->non_qui[j * 64 + refact]){
+            return false;
+        }
+    }
+
+    for(j = 0; j < 64; j++){
+        count = 0;
+
+        for(i = 0; i < k; i++){
+            if(refactor(word[i]) == j) count++;
+        }
+
+        if(vincoli->num_esatto[j] != 0){
+            if(count != vincoli->num_esatto[j]) return false;
+        } else {
+            if(count < vincoli->num_minimo[j]) return false;
+        }
+    }
+
+    return true;
+}
 
 void aggiungi_albero(char* string){
     ptr_tree x = tree, y = NULL, z;
@@ -60,7 +93,7 @@ void aggiungi_albero(char* string){
     }
 }
 
-void leggi_parole(){
+bool leggi_parole(vincolo_t *vincoli){ // return true se nuova partita, altrimenti inserisci
     char* read;
 
     do {
@@ -68,8 +101,19 @@ void leggi_parole(){
         ignore = fgets(read, k+1, stdin);
         if(k+1 < 16) while(getchar_unlocked() != '\n');
 
-        if(read[0] != '+') aggiungi_albero(read);
+        if(read[0] != '+'){
+            aggiungi_albero(read);
+            if(vincoli != NULL && check_parola(vincoli, read)){
+                aggiungi_lista_inorder(read);
+            }
+        }
     } while(read[0] != '+');
+
+    if(read[1] == 'n'){
+        return true;
+    } else {
+        return false;
+    }
 }
 
 void create_inorder_list(ptr_tree x){
@@ -104,40 +148,11 @@ void delete_from_list(ptr_list x, ptr_list prev){
 }
 
 int check_vincoli(vincolo_t *vincoli){
-    bool check = true;
-    int refact, j, i, sum = 0, count;
+    int sum = 0;
     ptr_list x = list, prev = NULL, tmp;
 
     while(x != NULL){
-        for(j = 0; j < k && check; j++){
-            refact = refactor(x->key[j]);
-
-            if(vincoli->lettere_esatte[j] != '\0' && vincoli->lettere_esatte[j] != x->key[j]){
-                check = false;
-            } else if(vincoli->non_appartiene[refact]){
-                check = false;
-            } else if(vincoli->non_qui[j * 64 + refact]){
-                check = false;
-            }
-        }
-
-        if(check){
-            for(j = 0; j < 64 && check; j++){
-                count = 0;
-
-                for(i = 0; i < k; i++){
-                    if(refactor(x->key[i]) == j) count++;
-                }
-
-                if(vincoli->num_esatto[j] != 0){
-                    if(count != vincoli->num_esatto[j]) check = false;
-                } else {
-                    if(count < vincoli->num_minimo[j]) check = false;
-                }
-            }
-        }
-
-        if(check){
+        if(check_parola(vincoli, x->key)){
             sum++;
             prev = x;
             x = x->next;
@@ -146,8 +161,6 @@ int check_vincoli(vincolo_t *vincoli){
             delete_from_list(x, prev);
             x = tmp;
         }
-
-        check = true;
     }
 
     return sum;
@@ -195,16 +208,7 @@ void nuova_partita(){
 
             j--;
         } else if(p[0] == '+' && p[1] == 'i') { //+inserisci_inizio
-            leggi_parole();
-
-            ptr_list tmp;
-            while(list != NULL){
-                tmp = list;
-                list = list->next;
-                free(tmp);
-            }
-            create_inorder_list(tree);
-            check_vincoli(&vincoli);
+            leggi_parole(&vincoli);
 
             j--;
         } else {
@@ -295,11 +299,13 @@ void nuova_partita(){
 int main(){
     char x;
 
-    if(scanf("%d\n", &k) > 0){
-        leggi_parole();
-    }
+    if(scanf("%d\n", &k) <= 0) return 0;
 
-    nuova_partita();
+    if(leggi_parole(NULL)){
+        nuova_partita();
+    } else {
+        leggi_parole(NULL);
+    }
 
     x = getchar_unlocked();
     while(x != '\n' && x != EOF) {
@@ -308,7 +314,7 @@ int main(){
             nuova_partita();
         } else if(x == 'i'){
             while(getchar_unlocked() != '\n');
-            leggi_parole();
+            leggi_parole(NULL);
         }
 
         x = getchar_unlocked();
@@ -368,5 +374,25 @@ bool check_presenza_albero(ptr_tree x, char* string) {
         } else {
             return check_presenza_albero(x->right, string);
         }
+    }
+}
+
+void aggiungi_lista_inorder(char* word){
+    ptr_list x = list, prev = NULL;
+
+    while(x != NULL && strcmp(x->key, word) < 0){
+        prev = x;
+        x = x->next;
+    }
+
+    if(prev == NULL){
+        prev = list;
+        list = (ptr_list) malloc(sizeof(node_list_t));
+        list->key = word;
+        list->next = prev;
+    } else {
+        prev->next = (ptr_list) malloc(sizeof(node_list_t));
+        prev->next->key = word;
+        prev->next->next = x;
     }
 }
