@@ -20,6 +20,7 @@ typedef rb_tree_t *ptr_tree;
 ptr_tree tree;
 
 void tree_insert(ptr_tree, ptr_node_tree);
+bool check_presenza_albero(ptr_node_tree, char*);
 
 int k;
 #define CHUNK 100
@@ -63,6 +64,7 @@ void nuova_partita(){
     res[k] = '\0';
 
     int n, j, i;
+    bool check, won = false;
     char x;
 
     fgets(r, k+1, stdin);
@@ -85,9 +87,38 @@ void nuova_partita(){
             while(getchar_unlocked() != '\n');
         } else {
             i = 0;
-            p[i] = x;
-//TODO!
+            check = true;
+            do {
+                if(x != r[i]) check = false;
+                p[i] = x;
+                x = getchar_unlocked();
+                i++;
+            } while(i < k);
+            p[i] = '\0';
+
+            if(check){
+                printf("ok\n");
+
+                do{
+                    x = getchar_unlocked();
+                } while(x != '+' && x != EOF);
+
+                won = true;
+                break;
+            } else {
+                if(check_presenza_albero(tree->root, p)){
+//TODO
+                } else {
+                    printf("not_exists\n");
+                    j--;
+                }
+            }
         }
+    }
+
+    if(!won){
+        printf("ko\n");
+        getchar_unlocked();
     }
 }
 
@@ -109,7 +140,18 @@ int main(){
         leggi_parole();
     }
 
-    //todo
+    char x = getchar_unlocked();
+    while(x != '\n' && x != EOF) {
+        if(x == 'n'){
+            while(getchar_unlocked() != '\n');
+            nuova_partita();
+        } else if(x == 'i'){
+            while(getchar_unlocked() != '\n');
+            leggi_parole();
+        }
+
+        x = getchar_unlocked();
+    }
 
     return 0;
 }
@@ -225,4 +267,20 @@ void tree_insert(ptr_tree T, ptr_node_tree z){
     z->right = T->nil;
     z->red = true;
     tree_insert_fixup(T, z);
+}
+
+bool check_presenza_albero(ptr_node_tree x, char* string) {
+    if (x == tree->nil) {
+        return false;
+    } else {
+        int cmp = strcmp(string, x->key);
+
+        if (cmp == 0) {
+            return true;
+        } else if (cmp < 0) {
+            return check_presenza_albero(x->left, string);
+        } else {
+            return check_presenza_albero(x->right, string);
+        }
+    }
 }
