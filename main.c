@@ -16,7 +16,7 @@ typedef struct node_list {
     struct node_list *next;
 } node_list_t;
 typedef node_list_t *ptr_list;
-ptr_list list = NULL, last = NULL;
+ptr_list pointer_memory_list = NULL, list = NULL, last = NULL;
 
 typedef struct {
     char* lettere_esatte;
@@ -28,6 +28,7 @@ typedef struct {
 } vincolo_t;
 
 int k;
+int number_of_words = 0;
 char* ignore;
 int refactor(char);
 bool stringhe_uguali(char*, char*);
@@ -102,6 +103,7 @@ bool leggi_parole(vincolo_t *vincoli){ // return true se nuova partita, altrimen
         if(k+1 < 16) while(getchar_unlocked() != '\n');
 
         if(read[0] != '+'){
+            number_of_words++;
             aggiungi_albero(read);
             if(vincoli != NULL && check_parola(vincoli, read)){
                 aggiungi_lista_inorder(read);
@@ -116,22 +118,21 @@ bool leggi_parole(vincolo_t *vincoli){ // return true se nuova partita, altrimen
     }
 }
 
+int indice = 0;
 void create_inorder_list(ptr_tree x){
     if(x != NULL){
         create_inorder_list(x->left);
 
-        ptr_list new;
-        new = (ptr_list) malloc(sizeof(node_list_t));
-        new->key = x->key;
-        new->next = NULL;
+        ptr_list nodo = (ptr_list) (list + (indice));
+        nodo->key = x->key;
+        nodo->next = NULL;
 
-        if(list == NULL){
-            list = new;
-            last = new;
-        } else {
-            last->next = new;
-            last = new;
+        if(last != NULL){
+            last->next = nodo;
         }
+
+        last = nodo;
+        indice++;
 
         create_inorder_list(x->right);
     }
@@ -143,8 +144,6 @@ void delete_from_list(ptr_list x, ptr_list prev){
     } else {
         list = x->next;
     }
-
-    free(x);
 }
 
 int check_vincoli(vincolo_t *vincoli){
@@ -167,6 +166,8 @@ int check_vincoli(vincolo_t *vincoli){
 }
 
 void nuova_partita(){
+    list = malloc(sizeof(node_list_t) * number_of_words);
+    pointer_memory_list = list;
     create_inorder_list(tree);
 
     char p[k+1], r[k+1], res[k+1]; // r: riferimento, p: parola corrente, res: output
@@ -288,12 +289,11 @@ void nuova_partita(){
     free(vincoli.lettere_esatte);
     free(vincoli.non_qui);
 
-    ptr_list tmp;
-    while(list != NULL){
-        tmp = list;
-        list = list->next;
-        free(tmp);
-    }
+    free(pointer_memory_list);
+    list = NULL;
+    pointer_memory_list = NULL;
+    last = NULL;
+    indice = 0;
 }
 
 int main(){
