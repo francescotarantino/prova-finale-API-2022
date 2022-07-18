@@ -20,42 +20,39 @@ ptr_list pointer_memory_list = NULL, list = NULL, last = NULL;
 
 typedef struct {
     char* lettere_esatte;
-    bool non_appartiene[64];
-    bool apparso[64];
+    bool non_appartiene[256];
+    bool apparso[256];
     bool* non_qui;
-    int num_minimo[64];
-    int num_esatto[64];
+    int num_minimo[256];
+    int num_esatto[256];
 } vincolo_t;
 
 int k;
 int number_of_words = 0;
 char* ignore;
-int refactor(char);
 bool stringhe_uguali(char*, char*);
 void print_list();
 bool check_presenza_albero(ptr_tree, char*);
 void aggiungi_lista_inorder(char*);
 
 bool check_parola(vincolo_t *vincoli, char* word){
-    int i, j, refact, count;
+    int i, j, count;
 
     for(j = 0; j < k; j++){
-        refact = refactor(word[j]);
-
-        if(vincoli->lettere_esatte[j] != '\0' && vincoli->lettere_esatte[j] != word[j]){
+        if(vincoli->non_appartiene[(unsigned char) word[j]]){
             return false;
-        } else if(vincoli->non_appartiene[refact]){
+        } else if(vincoli->lettere_esatte[j] != '\0' && vincoli->lettere_esatte[j] != word[j]){
             return false;
-        } else if(vincoli->non_qui[j * 64 + refact]){
+        } else if(vincoli->non_qui[j * 256 + word[j]]){
             return false;
         }
     }
 
-    for(j = 0; j < 64; j++){
+    for(j = 0; j < 256; j++){
         count = 0;
 
         for(i = 0; i < k; i++){
-            if(refactor(word[i]) == j) count++;
+            if(word[i] == j) count++;
         }
 
         if(vincoli->num_esatto[j] != 0){
@@ -173,8 +170,8 @@ void nuova_partita(){
     char p[k+1], r[k+1], res[k+1]; // r: riferimento, p: parola corrente, res: output
     res[k] = '\0';
 
-    int n, i, j, refact;
-    int count_r[64] = {0}, count_r_tmp[64] = {0};
+    int n, i, j;
+    int count_r[256] = {0}, count_r_tmp[256] = {0};
     bool won = false;
     char x;
 
@@ -183,12 +180,12 @@ void nuova_partita(){
     memset(vincoli.lettere_esatte, 0, sizeof(char) * k);
     memset(vincoli.non_appartiene, false, sizeof(vincoli.non_appartiene));
     memset(vincoli.apparso, false, sizeof(vincoli.apparso));
-    vincoli.non_qui = malloc(sizeof(bool) * 64 * k);
-    memset(vincoli.non_qui, false, sizeof(bool) * 64 * k);
+    vincoli.non_qui = malloc(sizeof(bool) * 256 * k);
+    memset(vincoli.non_qui, false, sizeof(bool) * 256 * k);
     memset(vincoli.num_minimo, 0, sizeof(vincoli.num_minimo));
     memset(vincoli.num_esatto, 0, sizeof(vincoli.num_esatto));
 
-    int num_minimo_tmp[64] = {0};
+    int num_minimo_tmp[256] = {0};
 
     ignore = fgets(r, k+1, stdin);
 
@@ -197,7 +194,7 @@ void nuova_partita(){
     }
 
     for(i = 0; i < k; i++){
-        count_r[refactor(r[i])]++;
+        count_r[(unsigned char) r[i]]++;
     }
 
     for(j = 0; j < n; j++){
@@ -223,49 +220,45 @@ void nuova_partita(){
                 won = true;
                 break;
             } else if(check_presenza_albero(tree, p)){
-                for(i = 0; i < 64; i++){
+                for(i = 0; i < 256; i++){
                     count_r_tmp[i] = count_r[i];
                 }
 
                 for(i = 0; i < k; i++){
-                    refact = refactor(p[i]);
-
                     if(p[i] == r[i]){
                         res[i] = '+';
-                        count_r_tmp[refact]--;
+                        count_r_tmp[(unsigned char) p[i]]--;
 
                         vincoli.lettere_esatte[i] = p[i];
-                        vincoli.apparso[refact] = true;
-                        num_minimo_tmp[refact]++;
+                        vincoli.apparso[(unsigned char) p[i]] = true;
+                        num_minimo_tmp[(unsigned char) p[i]]++;
                     }
                 }
 
                 for(i = 0; i < k; i++){
-                    refact = refactor(p[i]);
-
                     if(vincoli.lettere_esatte[i] != p[i]){
-                        if(count_r_tmp[refact] > 0){
+                        if(count_r_tmp[(unsigned char) p[i]] > 0){
                             res[i] = '|';
-                            count_r_tmp[refact]--;
+                            count_r_tmp[(unsigned char) p[i]]--;
 
-                            vincoli.apparso[refact] = true;
-                            vincoli.non_qui[i * 64 + refact] = true;
-                            num_minimo_tmp[refact]++;
+                            vincoli.apparso[(unsigned char) p[i]] = true;
+                            vincoli.non_qui[i * 256 + p[i]] = true;
+                            num_minimo_tmp[(unsigned char) p[i]]++;
                         } else {
                             res[i] = '/';
 
-                            if(!vincoli.apparso[refact]){
-                                vincoli.non_appartiene[refact] = true;
+                            if(!vincoli.apparso[(unsigned char) p[i]]){
+                                vincoli.non_appartiene[(unsigned char) p[i]] = true;
                             } else {
-                                vincoli.num_esatto[refact] = num_minimo_tmp[refact];
+                                vincoli.num_esatto[(unsigned char) p[i]] = num_minimo_tmp[(unsigned char) p[i]];
                             }
 
-                            vincoli.non_qui[i * 64 + refact] = true;
+                            vincoli.non_qui[i * 256 + p[i]] = true;
                         }
                     }
                 }
 
-                for(i = 0; i < 64; i++){
+                for(i = 0; i < 256; i++){
                     if(num_minimo_tmp[i] > vincoli.num_minimo[i]){
                         vincoli.num_minimo[i] = num_minimo_tmp[i];
                     }
@@ -318,22 +311,6 @@ int main(){
         }
 
         x = getchar_unlocked();
-    }
-
-    return 0;
-}
-
-int refactor(char x){
-    if(x >= 48 && x <= 57){ // 0-9
-        return x-48;
-    } else if(x >= 65 && x <= 90){ // A-Z
-        return x - 55;
-    } else if(x >= 97 && x <= 122){ // a-z
-        return x - 61;
-    } else if(x == 45){ // -
-        return 62;
-    } else if(x == 95){ // _
-        return 63;
     }
 
     return 0;
