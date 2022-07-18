@@ -20,11 +20,11 @@ ptr_list pointer_memory_list = NULL, list = NULL, last = NULL;
 
 typedef struct {
     char* lettere_esatte;
-    bool non_appartiene[256];
-    bool apparso[256];
+    bool non_appartiene[128];
+    bool apparso[128];
     bool* non_qui;
-    int num_minimo[256];
-    int num_esatto[256];
+    int num_minimo[128];
+    int num_esatto[128];
 } vincolo_t;
 
 int k;
@@ -43,12 +43,12 @@ bool check_parola(vincolo_t *vincoli, char* word){
             return false;
         } else if(vincoli->lettere_esatte[j] != '\0' && vincoli->lettere_esatte[j] != word[j]){
             return false;
-        } else if(vincoli->non_qui[j * 256 + word[j]]){
+        } else if(vincoli->non_qui[j * 128 + word[j]]){
             return false;
         }
     }
 
-    for(j = 0; j < 256; j++){
+    for(j = 45; j < 128; j++){
         count = 0;
 
         for(i = 0; i < k; i++){
@@ -60,6 +60,11 @@ bool check_parola(vincolo_t *vincoli, char* word){
         } else {
             if(count < vincoli->num_minimo[j]) return false;
         }
+
+        if(j == 45) j = 47;
+        if(j == 57) j = 64;
+        if(j == 90) j = 96;
+        if(j == 122) j = 128;
     }
 
     return true;
@@ -135,7 +140,7 @@ void create_inorder_list(ptr_tree x){
     }
 }
 
-void delete_from_list(ptr_list x, ptr_list prev){
+void delete_from_list(ptr_list x, ptr_list prev){ //todo: delete se possibile
     if(prev != NULL){
         prev->next = x->next;
     } else {
@@ -171,7 +176,7 @@ void nuova_partita(){
     res[k] = '\0';
 
     int n, i, j;
-    int count_r[256] = {0}, count_r_tmp[256] = {0};
+    int count_r[128] = {0}, count_r_tmp[128] = {0};
     bool won = false;
     char x;
 
@@ -180,12 +185,12 @@ void nuova_partita(){
     memset(vincoli.lettere_esatte, 0, sizeof(char) * k);
     memset(vincoli.non_appartiene, false, sizeof(vincoli.non_appartiene));
     memset(vincoli.apparso, false, sizeof(vincoli.apparso));
-    vincoli.non_qui = malloc(sizeof(bool) * 256 * k);
-    memset(vincoli.non_qui, false, sizeof(bool) * 256 * k);
+    vincoli.non_qui = malloc(sizeof(bool) * 128 * k);
+    memset(vincoli.non_qui, false, sizeof(bool) * 128 * k);
     memset(vincoli.num_minimo, 0, sizeof(vincoli.num_minimo));
     memset(vincoli.num_esatto, 0, sizeof(vincoli.num_esatto));
 
-    int num_minimo_tmp[256] = {0};
+    int num_minimo_tmp[128] = {0};
 
     ignore = fgets(r, k+1, stdin);
 
@@ -220,8 +225,13 @@ void nuova_partita(){
                 won = true;
                 break;
             } else if(check_presenza_albero(tree, p)){
-                for(i = 0; i < 256; i++){
+                for(i = 45; i < 128; i++){
                     count_r_tmp[i] = count_r[i];
+
+                    if(i == 45) i = 47;
+                    if(i == 57) i = 64;
+                    if(i == 90) i = 96;
+                    if(i == 122) i = 128;
                 }
 
                 for(i = 0; i < k; i++){
@@ -242,7 +252,7 @@ void nuova_partita(){
                             count_r_tmp[(unsigned char) p[i]]--;
 
                             vincoli.apparso[(unsigned char) p[i]] = true;
-                            vincoli.non_qui[i * 256 + p[i]] = true;
+                            vincoli.non_qui[i * 128 + p[i]] = true;
                             num_minimo_tmp[(unsigned char) p[i]]++;
                         } else {
                             res[i] = '/';
@@ -253,17 +263,23 @@ void nuova_partita(){
                                 vincoli.num_esatto[(unsigned char) p[i]] = num_minimo_tmp[(unsigned char) p[i]];
                             }
 
-                            vincoli.non_qui[i * 256 + p[i]] = true;
+                            vincoli.non_qui[i * 128 + p[i]] = true;
                         }
                     }
                 }
 
-                for(i = 0; i < 256; i++){
+                for(i = 45; i < 128; i++){
                     if(num_minimo_tmp[i] > vincoli.num_minimo[i]){
                         vincoli.num_minimo[i] = num_minimo_tmp[i];
                     }
 
                     num_minimo_tmp[i] = 0;
+
+                    if(i == 45) i = 47;
+                    if(i == 57) i = 64;
+                    if(i == 90) i = 96;
+                    if(i == 122) i = 128;
+
                 }
 
                 printf("%s\n%d\n", res, check_vincoli(&vincoli));
