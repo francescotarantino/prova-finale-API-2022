@@ -67,7 +67,13 @@ void nuova_partita(){
     bool check, won = false;
     char x;
 
-    fgets(r, k+1, stdin);
+    i = 0;
+    do {
+        x = getchar_unlocked();
+        r[i] = x;
+        i++;
+    } while(i < k);
+    r[k] = '\0';
 
     scanf("%d\n", &n);
 
