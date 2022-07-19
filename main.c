@@ -19,6 +19,13 @@ typedef struct {
 typedef rb_tree_t *ptr_tree;
 ptr_tree tree;
 
+typedef struct node_list {
+    char* key;
+    struct node_list *next;
+} node_list_t;
+typedef node_list_t *ptr_list;
+ptr_list pointer_memory_list = NULL, list = NULL, last = NULL;
+
 void tree_insert(ptr_tree, ptr_node_tree);
 bool check_presenza_albero(ptr_node_tree, char*);
 
@@ -113,7 +120,7 @@ void nuova_partita(){
                 break;
             } else {
                 if(check_presenza_albero(tree->root, p)){
-//TODO
+                    //TODO finire
                 } else {
                     printf("not_exists\n");
                     j--;
