@@ -29,6 +29,10 @@ ptr_list pointer_memory_list = NULL, list = NULL, last = NULL;
 typedef struct {
     char* lettere_esatte;
     bool non_appartiene[128];
+    bool apparso[128];
+    bool* non_qui;
+    int num_minimo[128];
+    int num_esatto[128];
 } vincoli_t;
 
 enum comp {
@@ -83,12 +87,17 @@ void nuova_partita(){
     res[k] = '\0';
 
     int n, j, i;
-    bool check, won = false;
+    bool check, won = false, never = true;
     char x;
-    int count_r[128] = {0}, count_r_tmp[128] = {0};
+    int count_r[128] = {0}, count_r_tmp[128] = {0}, num_minimo_tmp[128] = {0};
 
     vincoli_t vincoli;
     vincoli.lettere_esatte = calloc(k, sizeof(char));
+    memset(vincoli.non_appartiene, false, 128 * sizeof(bool));
+    memset(vincoli.apparso, false, 128 * sizeof(bool));
+    vincoli.non_qui = calloc(128, sizeof(bool) * k);
+    memset(vincoli.num_minimo, 0, 128 * sizeof(bool));
+    memset(vincoli.num_esatto, 0, 128 * sizeof(bool));
 
     i = 0;
     do {
@@ -126,7 +135,6 @@ void nuova_partita(){
                 } else {
                     res[i] = '+';
                     count_r_tmp[(unsigned char) x]--;
-                    vincoli.lettere_esatte[i] = x;
                 }
                 p[i] = x;
                 x = getchar_unlocked();
@@ -151,10 +159,40 @@ void nuova_partita(){
                                 res[i] = '|';
 
                                 count_r_tmp[(unsigned char) p[i]]--;
+
+                                vincoli.apparso[(unsigned char) p[i]] = true;
+                                vincoli.non_qui[i * 128 + p[i]] = true;
+                                num_minimo_tmp[(unsigned char) p[i]]++;
                             } else {
                                 res[i] = '/';
+
+                                if(!vincoli.apparso[(unsigned char) p[i]]){
+                                    vincoli.non_appartiene[(unsigned char) p[i]] = true;
+                                } else {
+                                    vincoli.num_esatto[(unsigned char) p[i]] = num_minimo_tmp[(unsigned char) p[i]];
+                                }
+
+                                vincoli.non_qui[i * 128 + p[i]] = true;
                             }
+                        } else {
+                            vincoli.lettere_esatte[i] = p[i];
+                            vincoli.apparso[(unsigned char) p[i]] = true;
+                            num_minimo_tmp[(unsigned char) p[i]]++;
                         }
+                    }
+
+                    for(i = 45; i < 128; i++){
+                        if(num_minimo_tmp[i] > vincoli.num_minimo[i]){
+                            vincoli.num_minimo[i] = num_minimo_tmp[i];
+                        }
+
+                        num_minimo_tmp[i] = 0;
+
+                        if(i == 45) i = 47;
+                        if(i == 57) i = 64;
+                        if(i == 90) i = 96;
+                        if(i == 122) i = 128;
+
                     }
 
                     printf("%s\n", res);
@@ -172,6 +210,7 @@ void nuova_partita(){
     }
 
     free(vincoli.lettere_esatte);
+    free(vincoli.non_qui);
 }
 
 int main(){
