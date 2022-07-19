@@ -187,7 +187,7 @@ void nuova_partita(){
             } else { // inserisci
                 while(getchar_unlocked() != '\n');
 
-                leggi_parole(true);
+                leggi_parole(!never);
                 j--;
             }
         } else {
