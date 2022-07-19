@@ -26,14 +26,13 @@ typedef struct node_list {
 typedef node_list_t *ptr_list;
 ptr_list pointer_memory_list = NULL, list = NULL, last = NULL;
 
-typedef struct {
-    char* lettere_esatte;
-    bool non_appartiene[128];
-    bool apparso[128];
-    bool* non_qui;
-    int num_minimo[128];
-    int num_esatto[128];
-} vincoli_t;
+char* lettere_esatte;
+bool non_appartiene[128];
+bool apparso[128];
+bool* non_qui;
+int num_minimo[128];
+int num_esatto[128];
+
 
 enum comp {
     minore,
@@ -44,22 +43,35 @@ enum comp {
 void tree_insert(ptr_tree, ptr_node_tree);
 bool check_presenza_albero(ptr_node_tree, char*);
 enum comp string_comparison(char* x, char* y);
-bool check_parola(vincoli_t*, const char*);
+bool check_parola(const char*);
+int check_albero(ptr_node_tree);
+int check_lista();
+void stampa_albero_inorder(ptr_node_tree);
+void stampa_lista();
 
 int k;
+int number_of_words = 0;
 #define CHUNK 300
 
 char* ptr;
 int i_leggi = CHUNK;
 ptr_node_tree z_leggi = NULL;
 bool leggi_parole(){
+    int i;
+
     do {
         if(i_leggi == CHUNK){
             ptr = (char*) malloc(sizeof(char) * (k+1) * CHUNK);
             z_leggi = (ptr_node_tree) malloc(sizeof(tree_node_t) * (k+1) * CHUNK);
             i_leggi = 0;
         }
-        fgets(ptr, k+1, stdin);
+
+        i = 0;
+        do {
+            ptr[i] = getchar_unlocked();
+            i++;
+        } while(i < k);
+        ptr[i] = '\0';
         while(getchar_unlocked() != '\n');
 
         if(*ptr != '+'){
@@ -69,6 +81,7 @@ bool leggi_parole(){
             z_leggi->red = true;
             z_leggi->key = ptr;
             tree_insert(tree, z_leggi);
+            number_of_words++;
         }
 
         i_leggi++;
@@ -92,13 +105,12 @@ void nuova_partita(){
     char x;
     int count_r[128] = {0}, count_r_tmp[128] = {0}, num_minimo_tmp[128] = {0};
 
-    vincoli_t vincoli;
-    vincoli.lettere_esatte = calloc(k, sizeof(char));
-    memset(vincoli.non_appartiene, false, 128 * sizeof(bool));
-    memset(vincoli.apparso, false, 128 * sizeof(bool));
-    vincoli.non_qui = calloc(128, sizeof(bool) * k);
-    memset(vincoli.num_minimo, 0, 128 * sizeof(bool));
-    memset(vincoli.num_esatto, 0, 128 * sizeof(bool));
+    lettere_esatte = calloc(k, sizeof(char));
+    memset(non_appartiene, false,  sizeof(non_appartiene));
+    memset(apparso, false, sizeof(apparso));
+    non_qui = calloc(128, sizeof(bool) * k);
+    memset(num_minimo, 0, sizeof(num_minimo));
+    memset(num_esatto, 0, sizeof(num_esatto));
 
     i = 0;
     do {
@@ -109,14 +121,18 @@ void nuova_partita(){
     } while(i < k);
     r[k] = '\0';
 
-    scanf("%d\n", &n);
+    if(!scanf("%d\n", &n)) return;
 
     for(j = 0; j < n; j++){
         x = getchar_unlocked();
 
         if(x == '+'){
             if(getchar_unlocked() == 's'){
-                // TODO Stampa
+                if(never){
+                    stampa_albero_inorder(tree->root);
+                } else {
+                    stampa_lista();
+                }
                 j--;
             } else {
                 leggi_parole();
@@ -161,30 +177,30 @@ void nuova_partita(){
 
                                 count_r_tmp[(unsigned char) p[i]]--;
 
-                                vincoli.apparso[(unsigned char) p[i]] = true;
-                                vincoli.non_qui[i * 128 + p[i]] = true;
+                                apparso[(unsigned char) p[i]] = true;
+                                non_qui[i * 128 + p[i]] = true;
                                 num_minimo_tmp[(unsigned char) p[i]]++;
                             } else {
                                 res[i] = '/';
 
-                                if(!vincoli.apparso[(unsigned char) p[i]]){
-                                    vincoli.non_appartiene[(unsigned char) p[i]] = true;
+                                if(!apparso[(unsigned char) p[i]]){
+                                    non_appartiene[(unsigned char) p[i]] = true;
                                 } else {
-                                    vincoli.num_esatto[(unsigned char) p[i]] = num_minimo_tmp[(unsigned char) p[i]];
+                                    num_esatto[(unsigned char) p[i]] = num_minimo_tmp[(unsigned char) p[i]];
                                 }
 
-                                vincoli.non_qui[i * 128 + p[i]] = true;
+                                non_qui[i * 128 + p[i]] = true;
                             }
                         } else {
-                            vincoli.lettere_esatte[i] = p[i];
-                            vincoli.apparso[(unsigned char) p[i]] = true;
+                            lettere_esatte[i] = p[i];
+                            apparso[(unsigned char) p[i]] = true;
                             num_minimo_tmp[(unsigned char) p[i]]++;
                         }
                     }
 
                     for(i = 45; i < 128; i++){
-                        if(num_minimo_tmp[i] > vincoli.num_minimo[i]){
-                            vincoli.num_minimo[i] = num_minimo_tmp[i];
+                        if(num_minimo_tmp[i] > num_minimo[i]){
+                            num_minimo[i] = num_minimo_tmp[i];
                         }
 
                         num_minimo_tmp[i] = 0;
@@ -196,7 +212,14 @@ void nuova_partita(){
 
                     }
 
-                    printf("%s\n", res);
+                    if(never) {
+                        never = false;
+                        i = check_albero(tree->root);
+                    } else {
+                        i = check_lista();
+                    }
+
+                    printf("%s\n%d\n", res, i);
                 } else {
                     printf("not_exists\n");
                     j--;
@@ -210,8 +233,12 @@ void nuova_partita(){
         getchar_unlocked();
     }
 
-    free(vincoli.lettere_esatte);
-    free(vincoli.non_qui);
+    free(lettere_esatte);
+    free(non_qui);
+    free(pointer_memory_list);
+    pointer_memory_list = NULL;
+    list = NULL;
+    last = NULL;
 }
 
 int main(){
@@ -224,7 +251,7 @@ int main(){
     tree->nil->key = NULL;
     tree->root = tree->nil;
 
-    scanf("%d\n", &k);
+    if(!scanf("%d\n", &k)) return -1;
 
     if(leggi_parole()){
         nuova_partita();
@@ -374,6 +401,8 @@ bool check_presenza_albero(ptr_node_tree x, char* string) {
                 return check_presenza_albero(x->right, string);
         }
     }
+
+    return false;
 }
 
 enum comp string_comparison(char* x, char* y){ // true if x <= y, false otherwise
@@ -390,15 +419,15 @@ enum comp string_comparison(char* x, char* y){ // true if x <= y, false otherwis
     return uguale;
 }
 
-bool check_parola(vincoli_t *vincoli, const char* word){
+bool check_parola(const char* word){
     int i, j, count;
 
     for(j = 0; j < k; j++){
-        if(vincoli->non_appartiene[(unsigned char) word[j]]){
+        if(non_appartiene[(unsigned char) word[j]]){
             return false;
-        } else if(vincoli->lettere_esatte[j] != '\0' && vincoli->lettere_esatte[j] != word[j]){
+        } else if(lettere_esatte[j] != '\0' && lettere_esatte[j] != word[j]){
             return false;
-        } else if(vincoli->non_qui[j * 128 + word[j]]){
+        } else if(non_qui[j * 128 + word[j]]){
             return false;
         }
     }
@@ -410,10 +439,10 @@ bool check_parola(vincoli_t *vincoli, const char* word){
             if(word[i] == j) count++;
         }
 
-        if(vincoli->num_esatto[j] != 0){
-            if(count != vincoli->num_esatto[j]) return false;
+        if(num_esatto[j] != 0){
+            if(count != num_esatto[j]) return false;
         } else {
-            if(count < vincoli->num_minimo[j]) return false;
+            if(count < num_minimo[j]) return false;
         }
 
         if(j == 45) j = 47;
@@ -423,4 +452,79 @@ bool check_parola(vincoli_t *vincoli, const char* word){
     }
 
     return true;
+}
+
+int check_albero(ptr_node_tree T){
+    if(T != tree->nil){
+        int x;
+
+        x = check_albero(T->left);
+
+        if(check_parola(T->key)){
+            x++;
+
+            if(list == NULL){
+                list = (ptr_list) malloc(sizeof(node_list_t) * number_of_words);
+                pointer_memory_list = list;
+
+                list->key = T->key;
+                list->next = NULL;
+                last = list;
+            } else {
+                last->next = last + 1;
+                last->next->key = T->key;
+                last->next->next = NULL;
+                last = last->next;
+            }
+        }
+
+        x += check_albero(T->right);
+
+        return x;
+    } else {
+        return 0;
+    }
+}
+
+int check_lista(){
+    ptr_list x = list, y = NULL;
+    int i = 0;
+
+    while(x != NULL){
+        if(check_parola(x->key)){
+            i++;
+
+            y = x;
+        } else {
+            if(y == NULL){
+                list = x->next;
+            } else {
+                y->next = x->next;
+            }
+        }
+
+        x = x->next;
+    }
+
+    return i;
+}
+
+void stampa_albero_inorder(ptr_node_tree T){
+    if(T != tree->nil){
+        stampa_albero_inorder(T->left);
+
+        printf("%s\n", T->key);
+
+        stampa_albero_inorder(T->right);
+    }
+}
+
+void stampa_lista(){
+    ptr_list x = list;
+
+    while(x != NULL){
+        printf("%s\n", x->key);
+
+        x = x->next;
+    }
 }
