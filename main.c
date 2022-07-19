@@ -48,6 +48,7 @@ int check_albero(ptr_node_tree);
 int check_lista();
 void stampa_albero_inorder(ptr_node_tree);
 void stampa_lista();
+void aggiungi_lista_inorder(char*);
 
 int k;
 int number_of_words = 0;
@@ -56,8 +57,9 @@ int number_of_words = 0;
 char* ptr;
 int i_leggi = CHUNK;
 ptr_node_tree z_leggi = NULL;
-bool leggi_parole(){
-    int i;
+bool leggi_parole(const bool check){
+    int i, j;
+    bool add;
 
     do {
         if(i_leggi == CHUNK){
@@ -67,8 +69,22 @@ bool leggi_parole(){
         }
 
         i = 0;
+        add = true;
         do {
             ptr[i] = getchar_unlocked();
+
+            // check vincoli'1
+            if(check && add){
+                if(non_appartiene[(unsigned char) ptr[i]]){
+                    add = false;
+                } else if(lettere_esatte[i] != '\0' && lettere_esatte[i] != ptr[i]) {
+                    add = false;
+                } else if(non_qui[i * 128 + ptr[i]]){
+                    add = false;
+                }
+            }
+            // end check vincoli'1
+
             i++;
         } while(i < k);
         ptr[i] = '\0';
@@ -82,6 +98,34 @@ bool leggi_parole(){
             z_leggi->key = ptr;
             tree_insert(tree, z_leggi);
             number_of_words++;
+
+            // check vincoli'2
+            if(check && add){
+                int count;
+                for(j = 45; j < 128 && add; j++){
+                    count = 0;
+
+                    for(i = 0; i < k; i++){
+                        if(ptr[i] == j) count++;
+                    }
+
+                    if(num_esatto[j] != 0){
+                        if(count != num_esatto[j]) add = false;
+                    } else {
+                        if(count < num_minimo[j]) add = false;
+                    }
+
+                    if(j == 45) j = 47;
+                    if(j == 57) j = 64;
+                    if(j == 90) j = 96;
+                    if(j == 122) j = 128;
+                }
+            }
+            // end check vincoli'2
+
+            if(check && add){
+                aggiungi_lista_inorder(ptr);
+            }
         }
 
         i_leggi++;
@@ -127,16 +171,15 @@ void nuova_partita(){
         x = getchar_unlocked();
 
         if(x == '+'){
-            if(getchar_unlocked() == 's'){
+            if(getchar_unlocked() == 's'){ // stampa
                 if(never){
                     stampa_albero_inorder(tree->root);
                 } else {
                     stampa_lista();
                 }
                 j--;
-            } else {
-                leggi_parole();
-
+            } else { // inserisci
+                leggi_parole(true);
                 j--;
             }
 
@@ -253,10 +296,10 @@ int main(){
 
     if(!scanf("%d\n", &k)) return -1;
 
-    if(leggi_parole()){
+    if(leggi_parole(false)){
         nuova_partita();
     } else {
-        leggi_parole();
+        leggi_parole(false);
     }
 
     char x = getchar_unlocked();
@@ -266,7 +309,7 @@ int main(){
             nuova_partita();
         } else if(x == 'i'){
             while(getchar_unlocked() != '\n');
-            leggi_parole();
+            leggi_parole(false);
         }
 
         x = getchar_unlocked();
@@ -526,5 +569,25 @@ void stampa_lista(){
         printf("%s\n", x->key);
 
         x = x->next;
+    }
+}
+
+void aggiungi_lista_inorder(char* word){
+    ptr_list x = list, prev = NULL;
+
+    while(x != NULL && string_comparison(x->key, word) == minore){
+        prev = x;
+        x = x->next;
+    }
+
+    if(prev == NULL){
+        prev = list;
+        list = (ptr_list) malloc(sizeof(node_list_t));
+        list->key = word;
+        list->next = prev;
+    } else {
+        prev->next = (ptr_list) malloc(sizeof(node_list_t));
+        prev->next->key = word;
+        prev->next->next = x;
     }
 }
