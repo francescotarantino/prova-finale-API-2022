@@ -49,6 +49,7 @@ int check_lista();
 void stampa_albero_inorder(ptr_node_tree);
 void stampa_lista();
 void aggiungi_lista_inorder(char*);
+void print(char*);
 
 int k;
 int number_of_words = 0;
@@ -72,6 +73,17 @@ bool leggi_parole(const bool check){
         add = true;
         do {
             ptr[i] = getchar_unlocked();
+            if(i == 0 && ptr[0] == '+'){
+                if(getchar_unlocked() == 'n'){
+                    while(getchar_unlocked() != '\n');
+
+                    return true;
+                } else {
+                    while(getchar_unlocked() != '\n');
+
+                    return false;
+                }
+            }
 
             // check vincoli'1
             if(check && add){
@@ -87,57 +99,49 @@ bool leggi_parole(const bool check){
 
             i++;
         } while(i < k);
+        getchar_unlocked();
         ptr[i] = '\0';
-        while(getchar_unlocked() != '\n');
 
-        if(*ptr != '+'){
-            z_leggi->p = NULL;
-            z_leggi->right = NULL;
-            z_leggi->left = NULL;
-            z_leggi->red = true;
-            z_leggi->key = ptr;
-            tree_insert(tree, z_leggi);
-            number_of_words++;
+        z_leggi->p = NULL;
+        z_leggi->right = NULL;
+        z_leggi->left = NULL;
+        z_leggi->red = true;
+        z_leggi->key = ptr;
+        tree_insert(tree, z_leggi);
+        number_of_words++;
 
-            // check vincoli'2
-            if(check && add){
-                int count;
-                for(j = 45; j < 128 && add; j++){
-                    count = 0;
+        // check vincoli'2
+        if(check && add){
+            int count;
+            for(j = 45; j < 128 && add; j++){
+                count = 0;
 
-                    for(i = 0; i < k; i++){
-                        if(ptr[i] == j) count++;
-                    }
-
-                    if(num_esatto[j] != 0){
-                        if(count != num_esatto[j]) add = false;
-                    } else {
-                        if(count < num_minimo[j]) add = false;
-                    }
-
-                    if(j == 45) j = 47;
-                    if(j == 57) j = 64;
-                    if(j == 90) j = 96;
-                    if(j == 122) j = 128;
+                for(i = 0; i < k; i++){
+                    if(ptr[i] == j) count++;
                 }
-            }
-            // end check vincoli'2
 
-            if(check && add){
-                aggiungi_lista_inorder(ptr);
+                if(num_esatto[j] != 0){
+                    if(count != num_esatto[j]) add = false;
+                } else {
+                    if(count < num_minimo[j]) add = false;
+                }
+
+                if(j == 45) j = 47;
+                if(j == 57) j = 64;
+                if(j == 90) j = 96;
+                if(j == 122) j = 128;
             }
+        }
+        // end check vincoli'2
+
+        if(check && add) {
+            aggiungi_lista_inorder(ptr);
         }
 
         i_leggi++;
         ptr += k+1;
         z_leggi++;
-    } while(ptr[-(k+1)] != '+');
-
-    if(ptr[-(k+1) + 1] == 'n'){
-        return true;
-    } else {
-        return false;
-    }
+    } while(true);
 }
 
 void nuova_partita(){
@@ -172,6 +176,8 @@ void nuova_partita(){
 
         if(x == '+'){
             if(getchar_unlocked() == 's'){ // stampa
+                while(getchar_unlocked() != '\n');
+
                 if(never){
                     stampa_albero_inorder(tree->root);
                 } else {
@@ -179,11 +185,11 @@ void nuova_partita(){
                 }
                 j--;
             } else { // inserisci
+                while(getchar_unlocked() != '\n');
+
                 leggi_parole(true);
                 j--;
             }
-
-            while(getchar_unlocked() != '\n');
         } else {
             memcpy(count_r_tmp, count_r, 128 * sizeof(int));
 
@@ -203,7 +209,7 @@ void nuova_partita(){
             p[i] = '\0';
 
             if(check){
-                printf("ok\n");
+                print("ok");
 
                 do{
                     x = getchar_unlocked();
@@ -213,6 +219,15 @@ void nuova_partita(){
                 break;
             } else {
                 if(check_presenza_albero(tree->root, p)){
+
+                    // TODO si può fare con un unico ciclo??
+                    for(i = 0; i < k; i++){
+                        if(r[i] == p[i]){
+                            lettere_esatte[i] = p[i];
+                            apparso[(unsigned char) p[i]] = true;
+                            num_minimo_tmp[(unsigned char) p[i]]++;
+                        }
+                    }
                     for(i = 0; i < k; i++){
                         if(r[i] != p[i]){
                             if(count_r_tmp[(unsigned char) p[i]] > 0){
@@ -234,10 +249,6 @@ void nuova_partita(){
 
                                 non_qui[i * 128 + p[i]] = true;
                             }
-                        } else {
-                            lettere_esatte[i] = p[i];
-                            apparso[(unsigned char) p[i]] = true;
-                            num_minimo_tmp[(unsigned char) p[i]]++;
                         }
                     }
 
@@ -262,9 +273,11 @@ void nuova_partita(){
                         i = check_lista();
                     }
 
-                    printf("%s\n%d\n", res, i);
+                    print(res);
+
+                    printf("%d\n", i);
                 } else {
-                    printf("not_exists\n");
+                    print("not_exists");
                     j--;
                 }
             }
@@ -272,7 +285,7 @@ void nuova_partita(){
     }
 
     if(!won){
-        printf("ko\n");
+        print("ko");
         getchar_unlocked();
     }
 
@@ -556,7 +569,7 @@ void stampa_albero_inorder(ptr_node_tree T){
     if(T != tree->nil){
         stampa_albero_inorder(T->left);
 
-        printf("%s\n", T->key);
+        print(T->key);
 
         stampa_albero_inorder(T->right);
     }
@@ -566,7 +579,7 @@ void stampa_lista(){
     ptr_list x = list;
 
     while(x != NULL){
-        printf("%s\n", x->key);
+        print(x->key);
 
         x = x->next;
     }
@@ -590,4 +603,12 @@ void aggiungi_lista_inorder(char* word){
         prev->next->key = word;
         prev->next->next = x;
     }
+}
+
+void print(char* string){
+    while(*string != '\0'){
+        putchar_unlocked(*string);
+        string++;
+    }
+    putchar_unlocked('\n');
 }
