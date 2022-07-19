@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct tree_node {
     char* key;
@@ -24,6 +25,11 @@ typedef struct node_list {
 } node_list_t;
 typedef node_list_t *ptr_list;
 ptr_list pointer_memory_list = NULL, list = NULL, last = NULL;
+
+typedef struct {
+    char* lettere_esatte;
+    bool non_appartiene[128];
+} vincoli_t;
 
 enum comp {
     minore,
@@ -79,11 +85,16 @@ void nuova_partita(){
     int n, j, i;
     bool check, won = false;
     char x;
+    int count_r[128] = {0}, count_r_tmp[128] = {0};
+
+    vincoli_t vincoli;
+    vincoli.lettere_esatte = calloc(k, sizeof(char));
 
     i = 0;
     do {
         x = getchar_unlocked();
         r[i] = x;
+        count_r[(unsigned char) x]++;
         i++;
     } while(i < k);
     r[k] = '\0';
@@ -105,6 +116,8 @@ void nuova_partita(){
 
             while(getchar_unlocked() != '\n');
         } else {
+            memcpy(count_r_tmp, count_r, 128 * sizeof(int));
+
             i = 0;
             check = true;
             do {
@@ -112,6 +125,8 @@ void nuova_partita(){
                     check = false;
                 } else {
                     res[i] = '+';
+                    count_r_tmp[(unsigned char) x]--;
+                    vincoli.lettere_esatte[i] = x;
                 }
                 p[i] = x;
                 x = getchar_unlocked();
@@ -130,8 +145,17 @@ void nuova_partita(){
                 break;
             } else {
                 if(check_presenza_albero(tree->root, p)){
+                    for(i = 0; i < k; i++){
+                        if(r[i] != p[i]){
+                            if(count_r_tmp[(unsigned char) p[i]] > 0){
+                                res[i] = '|';
 
-                    //TODO finire
+                                count_r_tmp[(unsigned char) p[i]]--;
+                            } else {
+                                res[i] = '/';
+                            }
+                        }
+                    }
 
                     printf("%s\n", res);
                 } else {
@@ -146,6 +170,8 @@ void nuova_partita(){
         printf("ko\n");
         getchar_unlocked();
     }
+
+    free(vincoli.lettere_esatte);
 }
 
 int main(){
@@ -302,13 +328,10 @@ bool check_presenza_albero(ptr_node_tree x, char* string) {
         switch (string_comparison(string, x->key)) {
             case uguale:
                 return true;
-                break;
             case minore:
                 return check_presenza_albero(x->left, string);
-                break;
             case maggiore:
                 return check_presenza_albero(x->right, string);
-                break;
         }
     }
 }
