@@ -128,7 +128,8 @@ bool leggi_parole(const bool check){
 
                 if(j == 45) j = 47;
                 if(j == 57) j = 64;
-                if(j == 90) j = 96;
+                if(j == 90) j = 94;
+                if(j == 95) j = 96;
                 if(j == 122) j = 128;
             }
         }
@@ -191,7 +192,7 @@ void nuova_partita(){
                 j--;
             }
         } else {
-            memcpy(count_r_tmp, count_r, 128 * sizeof(int));
+            memcpy(count_r_tmp, count_r, sizeof(count_r));
 
             i = 0;
             check = true;
@@ -261,9 +262,9 @@ void nuova_partita(){
 
                         if(i == 45) i = 47;
                         if(i == 57) i = 64;
-                        if(i == 90) i = 96;
+                        if(i == 90) i = 94;
+                        if(i == 95) i = 96;
                         if(i == 122) i = 128;
-
                     }
 
                     if(never) {
@@ -503,7 +504,8 @@ bool check_parola(const char* word){
 
         if(j == 45) j = 47;
         if(j == 57) j = 64;
-        if(j == 90) j = 96;
+        if(j == 90) j = 94;
+        if(j == 95) j = 96;
         if(j == 122) j = 128;
     }
 
