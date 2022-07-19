@@ -50,10 +50,11 @@ void stampa_albero_inorder(ptr_node_tree);
 void stampa_lista();
 void aggiungi_lista_inorder(char*);
 void print(char*);
+void print_integer(int x);
 
 int k;
 int number_of_words = 0;
-#define CHUNK 300
+#define CHUNK 3000
 
 char* ptr;
 int i_leggi = CHUNK;
@@ -276,7 +277,8 @@ void nuova_partita(){
 
                     print(res);
 
-                    printf("%d\n", i);
+                    print_integer(i);
+                    putchar_unlocked('\n');
                 } else {
                     print("not_exists");
                     j--;
@@ -613,4 +615,12 @@ void print(char* string){
         string++;
     }
     putchar_unlocked('\n');
+}
+
+void print_integer(int x){
+    if(x >= 10){
+        print_integer(x / 10);
+    }
+
+    putchar_unlocked(48 + x % 10);
 }
