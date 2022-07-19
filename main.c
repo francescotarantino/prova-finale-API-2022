@@ -51,6 +51,7 @@ void stampa_lista();
 void aggiungi_lista_inorder(char*);
 void print(char*);
 void print_integer(int x);
+int read_integer();
 
 int k;
 int number_of_words = 0;
@@ -171,7 +172,7 @@ void nuova_partita(){
     } while(i < k);
     r[k] = '\0';
 
-    if(!scanf("%d\n", &n)) return;
+    n = read_integer();
 
     for(j = 0; j < n; j++){
         x = getchar_unlocked();
@@ -310,7 +311,7 @@ int main(){
     tree->nil->key = NULL;
     tree->root = tree->nil;
 
-    if(!scanf("%d\n", &k)) return -1;
+    k = read_integer();
 
     if(leggi_parole(false)){
         nuova_partita();
@@ -623,4 +624,15 @@ void print_integer(int x){
     }
 
     putchar_unlocked(48 + x % 10);
+}
+
+int read_integer(){
+    char x;
+    int res = 0;
+
+    while((x = getchar_unlocked()) != '\n'){
+        res = (res * 10) + x - 48;
+    }
+
+    return res;
 }
