@@ -44,9 +44,10 @@ enum comp {
 void tree_insert(ptr_tree, ptr_node_tree);
 bool check_presenza_albero(ptr_node_tree, char*);
 enum comp string_comparison(char* x, char* y);
+bool check_parola(vincoli_t*, const char*);
 
 int k;
-#define CHUNK 100
+#define CHUNK 300
 
 char* ptr;
 int i_leggi = CHUNK;
@@ -387,4 +388,39 @@ enum comp string_comparison(char* x, char* y){ // true if x <= y, false otherwis
     }
 
     return uguale;
+}
+
+bool check_parola(vincoli_t *vincoli, const char* word){
+    int i, j, count;
+
+    for(j = 0; j < k; j++){
+        if(vincoli->non_appartiene[(unsigned char) word[j]]){
+            return false;
+        } else if(vincoli->lettere_esatte[j] != '\0' && vincoli->lettere_esatte[j] != word[j]){
+            return false;
+        } else if(vincoli->non_qui[j * 128 + word[j]]){
+            return false;
+        }
+    }
+
+    for(j = 45; j < 128; j++){
+        count = 0;
+
+        for(i = 0; i < k; i++){
+            if(word[i] == j) count++;
+        }
+
+        if(vincoli->num_esatto[j] != 0){
+            if(count != vincoli->num_esatto[j]) return false;
+        } else {
+            if(count < vincoli->num_minimo[j]) return false;
+        }
+
+        if(j == 45) j = 47;
+        if(j == 57) j = 64;
+        if(j == 90) j = 96;
+        if(j == 122) j = 128;
+    }
+
+    return true;
 }
