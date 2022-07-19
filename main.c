@@ -172,6 +172,7 @@ void nuova_partita(){
     } while(i < k);
     r[k] = '\0';
 
+    getchar_unlocked();
     n = read_integer();
 
     for(j = 0; j < n; j++){
