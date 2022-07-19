@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <string.h>
 
 typedef struct tree_node {
     char* key;
@@ -26,8 +25,15 @@ typedef struct node_list {
 typedef node_list_t *ptr_list;
 ptr_list pointer_memory_list = NULL, list = NULL, last = NULL;
 
+enum comp {
+    minore,
+    maggiore,
+    uguale
+};
+
 void tree_insert(ptr_tree, ptr_node_tree);
 bool check_presenza_albero(ptr_node_tree, char*);
+enum comp string_comparison(char* x, char* y);
 
 int k;
 #define CHUNK 100
@@ -102,7 +108,11 @@ void nuova_partita(){
             i = 0;
             check = true;
             do {
-                if(x != r[i]) check = false;
+                if(x != r[i]){
+                    check = false;
+                } else {
+                    res[i] = '+';
+                }
                 p[i] = x;
                 x = getchar_unlocked();
                 i++;
@@ -120,7 +130,10 @@ void nuova_partita(){
                 break;
             } else {
                 if(check_presenza_albero(tree->root, p)){
+
                     //TODO finire
+
+                    printf("%s\n", res);
                 } else {
                     printf("not_exists\n");
                     j--;
@@ -260,7 +273,7 @@ void tree_insert(ptr_tree T, ptr_node_tree z){
 
     while(x != T->nil){
         y = x;
-        if(strcmp(z->key, x->key) < 0){
+        if(string_comparison(z->key, x->key) == minore){
             x = x->left;
         } else {
             x = x->right;
@@ -270,7 +283,7 @@ void tree_insert(ptr_tree T, ptr_node_tree z){
 
     if(y == T->nil){
         T->root = z;
-    } else if(strcmp(z->key, y->key) < 0){
+    } else if(string_comparison(z->key, y->key) == minore){
         y->left = z;
     } else {
         y->right = z;
@@ -286,14 +299,30 @@ bool check_presenza_albero(ptr_node_tree x, char* string) {
     if (x == tree->nil) {
         return false;
     } else {
-        int cmp = strcmp(string, x->key);
-
-        if (cmp == 0) {
-            return true;
-        } else if (cmp < 0) {
-            return check_presenza_albero(x->left, string);
-        } else {
-            return check_presenza_albero(x->right, string);
+        switch (string_comparison(string, x->key)) {
+            case uguale:
+                return true;
+                break;
+            case minore:
+                return check_presenza_albero(x->left, string);
+                break;
+            case maggiore:
+                return check_presenza_albero(x->right, string);
+                break;
         }
     }
+}
+
+enum comp string_comparison(char* x, char* y){ // true if x <= y, false otherwise
+    while(*x != '\0' || *y != '\0'){
+        if(*x < *y){
+            return minore;
+        } else if(*x > *y){
+            return maggiore;
+        }
+        x++;
+        y++;
+    }
+
+    return uguale;
 }
