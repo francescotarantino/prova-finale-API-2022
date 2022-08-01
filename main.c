@@ -20,11 +20,18 @@ typedef rb_tree_t *ptr_tree;
 ptr_tree tree, filtered_tree;
 
 typedef struct node_list {
-    ptr_node_tree key;
+    char* key;
     struct node_list *next;
 } node_list_t;
 typedef node_list_t *ptr_list;
-ptr_list list_to_delete, list_to_delete_last;
+ptr_list pointer_memory_list = NULL, list = NULL, last = NULL;
+
+typedef struct node_list_nodes {
+    ptr_node_tree key;
+    struct node_list_nodes *next;
+} node_list_nodes_t;
+typedef node_list_nodes_t *ptr_list_nodes;
+ptr_list_nodes list_of_nodes = NULL, last_of_nodes = NULL;
 
 char* lettere_esatte;
 bool non_appartiene[128];
@@ -45,15 +52,18 @@ void tree_delete(ptr_tree, ptr_node_tree);
 bool check_presenza_albero(ptr_node_tree, char*);
 enum comp string_comparison(char* x, char* y);
 bool check_parola(const char*);
-int check_albero(ptr_tree, ptr_node_tree, bool);
-void stampa_albero_inorder(ptr_tree, ptr_node_tree);
+int check_albero(ptr_node_tree, bool);
+int check_lista();
+void stampa_albero_inorder(ptr_node_tree);
+void stampa_lista();
+void aggiungi_lista_inorder(char*);
 void print(char*);
 void print_integer(int x);
 int read_integer();
 
 int k;
 int number_of_words = 0;
-#define CHUNK 10000
+#define CHUNK 3000
 
 char* ptr;
 int i_leggi = CHUNK;
@@ -105,7 +115,7 @@ bool leggi_parole(const bool check){
         z_leggi->p = NULL;
         z_leggi->right = NULL;
         z_leggi->left = NULL;
-        z_leggi->red = false;
+        z_leggi->red = true;
         z_leggi->key = ptr;
         tree_insert(tree, z_leggi);
         number_of_words++;
@@ -136,14 +146,7 @@ bool leggi_parole(const bool check){
         // end check vincoli'2
 
         if(check && add) {
-            ptr_node_tree z = (ptr_node_tree) malloc(sizeof(tree_node_t));
-            z->p = NULL;
-            z->right = NULL;
-            z->left = NULL;
-            z->red = false;
-            z->key = ptr;
-
-            tree_insert(filtered_tree, z);
+            aggiungi_lista_inorder(ptr);
         }
 
         i_leggi++;
@@ -161,8 +164,6 @@ void nuova_partita(){
     filtered_tree->nil->red = false;
     filtered_tree->nil->key = NULL;
     filtered_tree->root = filtered_tree->nil;
-
-    list_to_delete = NULL;
 
     char p[k+1], r[k+1], res[k+1];
     res[k] = '\0';
@@ -199,9 +200,9 @@ void nuova_partita(){
                 while(getchar_unlocked() != '\n');
 
                 if(never){
-                    stampa_albero_inorder(tree, tree->root);
+                    stampa_albero_inorder(tree->root);
                 } else {
-                    stampa_albero_inorder(filtered_tree,filtered_tree->root);
+                    stampa_lista();
                 }
                 j--;
             } else { // inserisci
@@ -288,19 +289,9 @@ void nuova_partita(){
 
                     if(never) {
                         never = false;
-                        i = check_albero(tree, tree->root, false);
+                        i = check_albero(tree->root, true);
                     } else {
-                        i = check_albero(filtered_tree, filtered_tree->root, true);
-
-                        ptr_list tmp = list_to_delete, tmp2;
-                        while(tmp != NULL){
-                            tmp2 = tmp;
-                            tree_delete(filtered_tree, tmp->key);
-                            tmp = tmp->next;
-                            free(tmp2);
-                        }
-                        list_to_delete = NULL;
-                        list_to_delete_last = NULL;
+                        i = check_albero(filtered_tree->root, false);
                     }
 
                     print(res);
@@ -322,8 +313,29 @@ void nuova_partita(){
 
     free(lettere_esatte);
     free(non_qui);
-    free(filtered_tree->nil);
-    free(filtered_tree);
+    free(pointer_memory_list);
+    pointer_memory_list = NULL;
+    list = NULL;
+    last = NULL;
+}
+
+void lista_da_albero(ptr_node_tree node){
+    if(node != tree->nil){
+        lista_da_albero(node->left);
+
+        ptr_list_nodes tmp = (ptr_list_nodes) malloc(sizeof(node_list_nodes_t));
+        tmp->key = node;
+        tmp->next = NULL;
+        if(list_of_nodes == NULL){
+            list_of_nodes = tmp;
+            last_of_nodes = tmp;
+        } else {
+            list_of_nodes->next = tmp;
+            last_of_nodes = tmp;
+        }
+
+        lista_da_albero(node->right);
+    }
 }
 
 int main(){
@@ -540,45 +552,30 @@ bool check_parola(const char* word){
     return true;
 }
 
-
-int check_albero(ptr_tree T, ptr_node_tree node, bool filtered){
-    if(node != T->nil){
+int check_albero(ptr_node_tree T, bool new){
+    if(T != tree->nil){
         int x;
 
-        x = check_albero(T, node->left, filtered);
+        x = check_albero(T->left, new);
 
-        if(check_parola(node->key)){
+        if(check_parola(T->key)){
             x++;
 
-            if(!filtered){
-                // aggiungi nell'albero filtered
-                ptr_node_tree z = (ptr_node_tree) malloc(sizeof(tree_node_t));
-                z->p = NULL;
-                z->right = NULL;
-                z->left = NULL;
-                z->red = true;
-                z->key = node->key;
-
-                tree_insert(filtered_tree, z);
-            }
-        } else {
-            if(filtered){
-                if(list_to_delete == NULL){
-                    list_to_delete = (ptr_list) malloc(sizeof(node_list_t));
-                    list_to_delete->key = node;
-                    list_to_delete->next = NULL;
-                    list_to_delete_last = list_to_delete;
+            if(new){
+                ptr_list_nodes tmp = (ptr_list_nodes) malloc(sizeof(node_list_nodes_t));
+                tmp->key = T;
+                tmp->next = NULL;
+                if(list_of_nodes == NULL){
+                    list_of_nodes = tmp;
+                    last_of_nodes = tmp;
                 } else {
-                    list_to_delete_last->next = (ptr_list) malloc(sizeof(node_list_t));
-                    list_to_delete_last->next->key = node;
-                    list_to_delete_last->next->next = NULL;
-                    list_to_delete_last = list_to_delete_last->next;
+                    list_of_nodes->next = tmp;
+                    last_of_nodes = tmp;
                 }
             }
         }
 
-        x += check_albero(T, node->right, filtered);
-
+        x += check_albero(T->right, new);
 
         return x;
     } else {
@@ -586,13 +583,66 @@ int check_albero(ptr_tree T, ptr_node_tree node, bool filtered){
     }
 }
 
-void stampa_albero_inorder(ptr_tree T, ptr_node_tree node){
-    if(node != T->nil){
-        stampa_albero_inorder(T, node->left);
+int check_lista(){
+    ptr_list x = list, y = NULL;
+    int i = 0;
 
-        print(node->key);
+    while(x != NULL){
+        if(check_parola(x->key)){
+            i++;
 
-        stampa_albero_inorder(T, node->right);
+            y = x;
+        } else {
+            if(y == NULL){
+                list = x->next;
+            } else {
+                y->next = x->next;
+            }
+        }
+
+        x = x->next;
+    }
+
+    return i;
+}
+
+void stampa_albero_inorder(ptr_node_tree T){
+    if(T != tree->nil){
+        stampa_albero_inorder(T->left);
+
+        print(T->key);
+
+        stampa_albero_inorder(T->right);
+    }
+}
+
+void stampa_lista(){
+    ptr_list x = list;
+
+    while(x != NULL){
+        print(x->key);
+
+        x = x->next;
+    }
+}
+
+void aggiungi_lista_inorder(char* word){
+    ptr_list x = list, prev = NULL;
+
+    while(x != NULL && string_comparison(x->key, word) == minore){
+        prev = x;
+        x = x->next;
+    }
+
+    if(prev == NULL){
+        prev = list;
+        list = (ptr_list) malloc(sizeof(node_list_t));
+        list->key = word;
+        list->next = prev;
+    } else {
+        prev->next = (ptr_list) malloc(sizeof(node_list_t));
+        prev->next->key = word;
+        prev->next->next = x;
     }
 }
 
@@ -658,8 +708,7 @@ void tree_delete_fixup(ptr_tree T, ptr_node_tree x){
             w = x->p->right;
         }
 
-        if(w->left == NULL || w->right == NULL ){} else
-        if(( w->left->red == false) && ( w->right->red == false)){
+        if(w->left->red == false && w->right->red == false){
             w->red = true;
             tree_delete_fixup(T, x->p);
         } else {
@@ -683,7 +732,6 @@ void tree_delete_fixup(ptr_tree T, ptr_node_tree x){
             w = x->p->left;
         }
 
-        if(w->left == NULL || w->right == NULL ){} else
         if(w->left->red == false && w->right->red == false){
             w->red = true;
             tree_delete_fixup(T, x->p);
