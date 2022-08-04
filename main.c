@@ -17,7 +17,7 @@ typedef struct {
     tree_node_t *nil;
 } rb_tree_t;
 typedef rb_tree_t *ptr_tree;
-ptr_tree tree, filtered_tree;
+ptr_tree tree;
 
 typedef struct node_list {
     char* key;
@@ -25,13 +25,6 @@ typedef struct node_list {
 } node_list_t;
 typedef node_list_t *ptr_list;
 ptr_list pointer_memory_list = NULL, list = NULL, last = NULL;
-
-typedef struct node_list_nodes {
-    ptr_node_tree key;
-    struct node_list_nodes *next;
-} node_list_nodes_t;
-typedef node_list_nodes_t *ptr_list_nodes;
-ptr_list_nodes list_of_nodes = NULL, last_of_nodes = NULL;
 
 char* lettere_esatte;
 bool non_appartiene[128];
@@ -48,11 +41,10 @@ enum comp {
 };
 
 void tree_insert(ptr_tree, ptr_node_tree);
-void tree_delete(ptr_tree, ptr_node_tree);
 bool check_presenza_albero(ptr_node_tree, char*);
 enum comp string_comparison(char* x, char* y);
 bool check_parola(const char*);
-int check_albero(ptr_node_tree, bool);
+int check_albero(ptr_node_tree);
 int check_lista();
 void stampa_albero_inorder(ptr_node_tree);
 void stampa_lista();
@@ -156,15 +148,6 @@ bool leggi_parole(const bool check){
 }
 
 void nuova_partita(){
-    filtered_tree = (ptr_tree) malloc(sizeof(rb_tree_t));
-    filtered_tree->nil = (ptr_node_tree) malloc(sizeof(tree_node_t));
-    filtered_tree->nil->left = NULL;
-    filtered_tree->nil->right = NULL;
-    filtered_tree->nil->p = NULL;
-    filtered_tree->nil->red = false;
-    filtered_tree->nil->key = NULL;
-    filtered_tree->root = filtered_tree->nil;
-
     char p[k+1], r[k+1], res[k+1];
     res[k] = '\0';
 
@@ -289,9 +272,9 @@ void nuova_partita(){
 
                     if(never) {
                         never = false;
-                        i = check_albero(tree->root, true);
+                        i = check_albero(tree->root);
                     } else {
-                        i = check_albero(filtered_tree->root, false);
+                        i = check_lista();
                     }
 
                     print(res);
@@ -317,25 +300,6 @@ void nuova_partita(){
     pointer_memory_list = NULL;
     list = NULL;
     last = NULL;
-}
-
-void lista_da_albero(ptr_node_tree node){
-    if(node != tree->nil){
-        lista_da_albero(node->left);
-
-        ptr_list_nodes tmp = (ptr_list_nodes) malloc(sizeof(node_list_nodes_t));
-        tmp->key = node;
-        tmp->next = NULL;
-        if(list_of_nodes == NULL){
-            list_of_nodes = tmp;
-            last_of_nodes = tmp;
-        } else {
-            list_of_nodes->next = tmp;
-            last_of_nodes = tmp;
-        }
-
-        lista_da_albero(node->right);
-    }
 }
 
 int main(){
@@ -552,30 +516,31 @@ bool check_parola(const char* word){
     return true;
 }
 
-int check_albero(ptr_node_tree T, bool new){
+int check_albero(ptr_node_tree T){
     if(T != tree->nil){
         int x;
 
-        x = check_albero(T->left, new);
+        x = check_albero(T->left);
 
         if(check_parola(T->key)){
             x++;
 
-            if(new){
-                ptr_list_nodes tmp = (ptr_list_nodes) malloc(sizeof(node_list_nodes_t));
-                tmp->key = T;
-                tmp->next = NULL;
-                if(list_of_nodes == NULL){
-                    list_of_nodes = tmp;
-                    last_of_nodes = tmp;
-                } else {
-                    list_of_nodes->next = tmp;
-                    last_of_nodes = tmp;
-                }
+            if(list == NULL){
+                list = (ptr_list) malloc(sizeof(node_list_t) * number_of_words);
+                pointer_memory_list = list;
+
+                list->key = T->key;
+                list->next = NULL;
+                last = list;
+            } else {
+                last->next = last + 1;
+                last->next->key = T->key;
+                last->next->next = NULL;
+                last = last->next;
             }
         }
 
-        x += check_albero(T->right, new);
+        x += check_albero(T->right);
 
         return x;
     } else {
@@ -671,114 +636,4 @@ int read_integer(){
     }
 
     return res;
-}
-
-ptr_node_tree tree_minimum(ptr_tree T, ptr_node_tree x){
-    while(x->left != T->nil){
-        x = x->left;
-    }
-
-    return x;
-}
-
-ptr_node_tree tree_successor(ptr_tree T, ptr_node_tree x){
-    if(x->right != T->nil){
-        return tree_minimum(T, x->right);
-    }
-
-    ptr_node_tree y = x->p;
-    while(y != T->nil && x == y->right){
-        x = y;
-        y = y->p;
-    }
-
-    return y;
-}
-
-void tree_delete_fixup(ptr_tree T, ptr_node_tree x){
-    ptr_node_tree w;
-    if(x->red || x->p == T->nil){
-        x->red = false;
-    } else if(x == x->p->left) {
-        w = x->p->right;
-        if(w->red){
-            w->red = false;
-            x->p->red = true;
-            left_rotate(T, x->p);
-            w = x->p->right;
-        }
-
-        if(w->left->red == false && w->right->red == false){
-            w->red = true;
-            tree_delete_fixup(T, x->p);
-        } else {
-            if(w->right->red == false){
-                w->left->red = false;
-                w->red = true;
-                right_rotate(T, w);
-                w = x->p->right;
-            }
-            w->red = x->p->red;
-            x->p->red = false;
-            w->right->red = false;
-            left_rotate(T, x->p);
-        }
-    } else {
-        w = x->p->left;
-        if(w->red){
-            w->red = false;
-            x->p->red = true;
-            right_rotate(T, x->p);
-            w = x->p->left;
-        }
-
-        if(w->left->red == false && w->right->red == false){
-            w->red = true;
-            tree_delete_fixup(T, x->p);
-        } else {
-            if(w->left->red == false){
-                w->right->red = false;
-                w->red = true;
-                left_rotate(T, w);
-                w = x->p->left;
-            }
-            w->red = x->p->red;
-            x->p->red = false;
-            w->left->red = false;
-            right_rotate(T, x->p);
-        }
-    }
-}
-
-void tree_delete(ptr_tree T, ptr_node_tree z) {
-    ptr_node_tree x, y;
-    if(z->left == T->nil || z->right == T->nil){
-        y = z;
-    } else {
-        y = tree_successor(T, z);
-    }
-
-    if(y->left != T->nil){
-        x = y->left;
-    } else {
-        x = y->right;
-    }
-
-    x->p = y->p;
-
-    if(y->p == T->nil){
-        T->root = x;
-    } else if(y == y->p->left){
-        y->p->left = x;
-    } else {
-        y->p->right = x;
-    }
-
-    if(y != z){
-        z->key = y->key;
-    }
-
-    if(y->red == false){
-        tree_delete_fixup(T, x);
-    }
 }
