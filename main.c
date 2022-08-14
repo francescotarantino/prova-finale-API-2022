@@ -9,6 +9,7 @@ typedef struct tree_node {
     struct tree_node *right;
     struct tree_node *p;
     bool red; //TRUE if red FALSE if black
+    bool valid;
 } tree_node_t;
 typedef tree_node_t *ptr_node_tree;
 
@@ -18,13 +19,6 @@ typedef struct {
 } rb_tree_t;
 typedef rb_tree_t *ptr_tree;
 ptr_tree tree;
-
-typedef struct node_list {
-    char* key;
-    struct node_list *next;
-} node_list_t;
-typedef node_list_t *ptr_list;
-ptr_list pointer_memory_list = NULL, list = NULL, last = NULL;
 
 char* lettere_esatte;
 bool non_appartiene[128];
@@ -44,9 +38,8 @@ void tree_insert(ptr_tree, ptr_node_tree);
 bool check_presenza_albero(ptr_node_tree, char*);
 enum comp string_comparison(char* x, char* y);
 bool check_parola(const char*);
-int check_albero(ptr_node_tree);
-int check_lista();
-void stampa_albero_inorder(ptr_node_tree);
+int check_albero(ptr_node_tree, bool);
+void stampa_albero_inorder(ptr_node_tree, bool);
 void stampa_lista();
 void aggiungi_lista_inorder(char*);
 void print(char*);
@@ -108,6 +101,7 @@ bool leggi_parole(const bool check){
         z_leggi->right = NULL;
         z_leggi->left = NULL;
         z_leggi->red = true;
+        z_leggi->valid = true;
         z_leggi->key = ptr;
         tree_insert(tree, z_leggi);
         number_of_words++;
@@ -137,8 +131,8 @@ bool leggi_parole(const bool check){
         }
         // end check vincoli'2
 
-        if(check && add) {
-            aggiungi_lista_inorder(ptr);
+        if(check && !add) {
+            z_leggi->valid = false;
         }
 
         i_leggi++;
@@ -182,11 +176,7 @@ void nuova_partita(){
             if(getchar_unlocked() == 's'){ // stampa
                 while(getchar_unlocked() != '\n');
 
-                if(never){
-                    stampa_albero_inorder(tree->root);
-                } else {
-                    stampa_lista();
-                }
+                stampa_albero_inorder(tree->root, !never);
                 j--;
             } else { // inserisci
                 while(getchar_unlocked() != '\n');
@@ -272,9 +262,9 @@ void nuova_partita(){
 
                     if(never) {
                         never = false;
-                        i = check_albero(tree->root);
+                        i = check_albero(tree->root, false);
                     } else {
-                        i = check_lista();
+                        i = check_albero(tree->root, true);
                     }
 
                     print(res);
@@ -296,10 +286,6 @@ void nuova_partita(){
 
     free(lettere_esatte);
     free(non_qui);
-    free(pointer_memory_list);
-    pointer_memory_list = NULL;
-    list = NULL;
-    last = NULL;
 }
 
 int main(){
@@ -450,16 +436,16 @@ void tree_insert(ptr_tree T, ptr_node_tree z){
 }
 
 bool check_presenza_albero(ptr_node_tree x, char* string) {
-    if (x == tree->nil) {
-        return false;
-    } else {
+    while(x != tree->nil){
         switch (string_comparison(string, x->key)) {
             case uguale:
                 return true;
             case minore:
-                return check_presenza_albero(x->left, string);
+                x = x->left;
+                break;
             case maggiore:
-                return check_presenza_albero(x->right, string);
+                x = x->right;
+                break;
         }
     }
 
@@ -516,98 +502,97 @@ bool check_parola(const char* word){
     return true;
 }
 
-int check_albero(ptr_node_tree T){
-    if(T != tree->nil){
-        int x;
-
-        x = check_albero(T->left);
-
-        if(check_parola(T->key)){
-            x++;
-
-            if(list == NULL){
-                list = (ptr_list) malloc(sizeof(node_list_t) * number_of_words);
-                pointer_memory_list = list;
-
-                list->key = T->key;
-                list->next = NULL;
-                last = list;
-            } else {
-                last->next = last + 1;
-                last->next->key = T->key;
-                last->next->next = NULL;
-                last = last->next;
-            }
-        }
-
-        x += check_albero(T->right);
-
-        return x;
-    } else {
-        return 0;
+ptr_node_tree tree_maximum(ptr_tree T, ptr_node_tree x){
+    while(x->right != T->nil){
+        x = x->right;
     }
+
+    return x;
 }
 
-int check_lista(){
-    ptr_list x = list, y = NULL;
-    int i = 0;
+ptr_node_tree tree_predecessor(ptr_tree T, ptr_node_tree x){
+    if(x->left != T->nil){
+        return tree_maximum(T, x->left);
+    }
 
-    while(x != NULL){
-        if(check_parola(x->key)){
-            i++;
+    ptr_node_tree y = x->p;
+    while (y != T->nil && x == y->left){
+        x = y;
+        y = y->p;
+    }
 
-            y = x;
+    return y;
+}
+
+typedef struct nodo_stack {
+    ptr_node_tree key;
+    struct nodo_stack *prev;
+} nodo_stack_t;
+typedef nodo_stack_t *ptr_nodo_stack;
+ptr_nodo_stack stack = NULL;
+
+void stack_push(ptr_node_tree x){
+    ptr_nodo_stack tmp = stack;
+
+    stack = (ptr_nodo_stack) malloc(sizeof(nodo_stack_t));
+    stack->prev = tmp;
+    stack->key = x;
+}
+
+ptr_node_tree stack_pop(){
+    ptr_nodo_stack tmp = stack;
+    ptr_node_tree to_return;
+
+    if(stack != NULL){
+        stack = tmp->prev;
+        to_return = tmp->key;
+        free(tmp);
+    } else {
+        to_return = tree->nil;
+    }
+
+    return to_return;
+}
+
+int check_albero(ptr_node_tree T, bool use_valid_prop){
+    int counter = 0;
+    bool go = true;
+
+    while(go){
+        if(T != tree->nil){
+            stack_push(T);
+            T = T->left;
         } else {
-            if(y == NULL){
-                list = x->next;
+            T = stack_pop();
+
+            if(T == tree->nil){
+                go = false;
             } else {
-                y->next = x->next;
+                if(T->valid || !use_valid_prop){
+                    if(check_parola(T->key)){
+                        counter++;
+                        T->valid = true;
+                    } else {
+                        T->valid = false;
+                    }
+                }
+
+                T = T->right;
             }
         }
-
-        x = x->next;
     }
 
-    return i;
+
+    return counter;
 }
 
-void stampa_albero_inorder(ptr_node_tree T){
+void stampa_albero_inorder(ptr_node_tree T, bool use_valid_prop){
     if(T != tree->nil){
-        stampa_albero_inorder(T->left);
+        stampa_albero_inorder(T->left, use_valid_prop);
 
-        print(T->key);
+        if(T->valid || !use_valid_prop) print(T->key);
 
-        stampa_albero_inorder(T->right);
-    }
-}
-
-void stampa_lista(){
-    ptr_list x = list;
-
-    while(x != NULL){
-        print(x->key);
-
-        x = x->next;
-    }
-}
-
-void aggiungi_lista_inorder(char* word){
-    ptr_list x = list, prev = NULL;
-
-    while(x != NULL && string_comparison(x->key, word) == minore){
-        prev = x;
-        x = x->next;
-    }
-
-    if(prev == NULL){
-        prev = list;
-        list = (ptr_list) malloc(sizeof(node_list_t));
-        list->key = word;
-        list->next = prev;
-    } else {
-        prev->next = (ptr_list) malloc(sizeof(node_list_t));
-        prev->next->key = word;
-        prev->next->next = x;
+        stampa_albero_inorder(T->right, use_valid_prop);
     }
 }
 
