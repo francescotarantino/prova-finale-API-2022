@@ -53,6 +53,7 @@ void print(char*);
 void print_integer(int x);
 int read_integer();
 void add_to_filtered(char*);
+void stack_push(ptr_nodo_stack*, ptr_node_tree);
 ptr_node_tree stack_pop(ptr_nodo_stack*);
 
 ptr_node_tree tree_delete(ptr_tree, ptr_node_tree);
@@ -558,35 +559,11 @@ ptr_node_tree tree_predecessor(ptr_tree T, ptr_node_tree x){
     return y;
 }
 
-ptr_nodo_stack stack = NULL;
-
-void stack_push(ptr_nodo_stack* y, ptr_node_tree x){
-    ptr_nodo_stack tmp = *y;
-
-    *y = (ptr_nodo_stack) malloc(sizeof(nodo_stack_t));
-    (*y)->prev = tmp;
-    (*y)->key = x;
-}
-
-ptr_node_tree stack_pop(ptr_nodo_stack* x){
-    ptr_nodo_stack tmp = *x;
-    ptr_node_tree to_return;
-
-    if(*x != NULL){
-        (*x) = tmp->prev;
-        to_return = tmp->key;
-        free(tmp);
-    } else {
-        to_return = NULL;
-    }
-
-    return to_return;
-}
-
-ptr_nodo_stack stack_del = NULL;
-
 int check_albero(ptr_tree TREE, ptr_node_tree T, bool never){
     int counter = 0;
+    ptr_nodo_stack stack_del = NULL;
+    ptr_nodo_stack stack = NULL;
+
     bool go = true;
 
     while(go){
@@ -801,4 +778,27 @@ void add_to_filtered(char* add){
     tree_insert(filtered_tree, new);
 
     i_filtered++;
+}
+
+void stack_push(ptr_nodo_stack* y, ptr_node_tree x){
+    ptr_nodo_stack tmp = *y;
+
+    *y = (ptr_nodo_stack) malloc(sizeof(nodo_stack_t));
+    (*y)->prev = tmp;
+    (*y)->key = x;
+}
+
+ptr_node_tree stack_pop(ptr_nodo_stack* x){
+    ptr_nodo_stack tmp = *x;
+    ptr_node_tree to_return;
+
+    if(*x != NULL){
+        (*x) = tmp->prev;
+        to_return = tmp->key;
+        free(tmp);
+    } else {
+        to_return = NULL;
+    }
+
+    return to_return;
 }
