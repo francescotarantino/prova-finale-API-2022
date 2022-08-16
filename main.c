@@ -9,7 +9,6 @@ typedef struct tree_node {
     struct tree_node *right;
     struct tree_node *p;
     bool red; //TRUE if red FALSE if black
-    bool valid;
 } tree_node_t;
 typedef tree_node_t *ptr_node_tree;
 
@@ -19,6 +18,8 @@ typedef struct {
 } rb_tree_t;
 typedef rb_tree_t *ptr_tree;
 ptr_tree tree;
+
+ptr_tree filtered_tree;
 
 char* lettere_esatte;
 bool non_appartiene[128];
@@ -38,13 +39,15 @@ void tree_insert(ptr_tree, ptr_node_tree);
 bool check_presenza_albero(ptr_node_tree, char*);
 enum comp string_comparison(char* x, char* y);
 bool check_parola(const char*);
-int check_albero(ptr_node_tree, bool);
-void stampa_albero_inorder(ptr_node_tree, bool);
+int check_albero(ptr_tree, ptr_node_tree, bool);
+void stampa_albero_inorder(ptr_tree, ptr_node_tree);
 void stampa_lista();
 void aggiungi_lista_inorder(char*);
 void print(char*);
 void print_integer(int x);
 int read_integer();
+
+ptr_node_tree tree_delete(ptr_tree, ptr_node_tree);
 
 int k;
 int number_of_words = 0;
@@ -101,7 +104,6 @@ bool leggi_parole(const bool check){
         z_leggi->right = NULL;
         z_leggi->left = NULL;
         z_leggi->red = true;
-        z_leggi->valid = true;
         z_leggi->key = ptr;
         tree_insert(tree, z_leggi);
         number_of_words++;
@@ -131,8 +133,16 @@ bool leggi_parole(const bool check){
         }
         // end check vincoli'2
 
-        if(check && !add) {
-            z_leggi->valid = false;
+        if(check && add) {
+            ptr_node_tree new = (ptr_node_tree) malloc(sizeof(tree_node_t));
+
+            new->p = NULL;
+            new->right = NULL;
+            new->left = NULL;
+            new->red = true;
+            new->key = ptr;
+
+            tree_insert(filtered_tree, new);
         }
 
         i_leggi++;
@@ -142,6 +152,15 @@ bool leggi_parole(const bool check){
 }
 
 void nuova_partita(){
+    filtered_tree = (ptr_tree) malloc(sizeof(rb_tree_t));
+    filtered_tree->nil = (ptr_node_tree) malloc(sizeof(tree_node_t));
+    filtered_tree->nil->left = NULL;
+    filtered_tree->nil->right = NULL;
+    filtered_tree->nil->p = NULL;
+    filtered_tree->nil->red = false;
+    filtered_tree->nil->key = NULL;
+    filtered_tree->root = filtered_tree->nil;
+
     char p[k+1], r[k+1], res[k+1];
     res[k] = '\0';
 
@@ -176,7 +195,11 @@ void nuova_partita(){
             if(getchar_unlocked() == 's'){ // stampa
                 while(getchar_unlocked() != '\n');
 
-                stampa_albero_inorder(tree->root, !never);
+                if(never){
+                    stampa_albero_inorder(tree, tree->root);
+                } else {
+                    stampa_albero_inorder(filtered_tree, filtered_tree->root);
+                }
                 j--;
             } else { // inserisci
                 while(getchar_unlocked() != '\n');
@@ -262,9 +285,9 @@ void nuova_partita(){
 
                     if(never) {
                         never = false;
-                        i = check_albero(tree->root, false);
+                        i = check_albero(tree, tree->root, true);
                     } else {
-                        i = check_albero(tree->root, true);
+                        i = check_albero(filtered_tree, filtered_tree->root, false);
                     }
 
                     print(res);
@@ -531,49 +554,66 @@ typedef struct nodo_stack {
 typedef nodo_stack_t *ptr_nodo_stack;
 ptr_nodo_stack stack = NULL;
 
-void stack_push(ptr_node_tree x){
-    ptr_nodo_stack tmp = stack;
+void stack_push(ptr_nodo_stack* y, ptr_node_tree x){
+    ptr_nodo_stack tmp = *y;
 
-    stack = (ptr_nodo_stack) malloc(sizeof(nodo_stack_t));
-    stack->prev = tmp;
-    stack->key = x;
+    *y = (ptr_nodo_stack) malloc(sizeof(nodo_stack_t));
+    (*y)->prev = tmp;
+    (*y)->key = x;
 }
 
-ptr_node_tree stack_pop(){
-    ptr_nodo_stack tmp = stack;
+ptr_node_tree stack_pop(ptr_nodo_stack* x){
+    ptr_nodo_stack tmp = *x;
     ptr_node_tree to_return;
 
-    if(stack != NULL){
-        stack = tmp->prev;
+    if(*x != NULL){
+        (*x) = tmp->prev;
         to_return = tmp->key;
         free(tmp);
     } else {
-        to_return = tree->nil;
+        to_return = NULL;
     }
 
     return to_return;
 }
 
-int check_albero(ptr_node_tree T, bool use_valid_prop){
+ptr_nodo_stack stack_del = NULL;
+
+int check_albero(ptr_tree TREE, ptr_node_tree T, bool never){
     int counter = 0;
     bool go = true;
 
     while(go){
-        if(T != tree->nil){
-            stack_push(T);
+        if(T != tree->nil && T != filtered_tree->nil){
+            stack_push(&stack, T);
             T = T->left;
         } else {
-            T = stack_pop();
+            T = stack_pop(&stack);
 
-            if(T == tree->nil){
+            if(T == NULL){
                 go = false;
             } else {
-                if(T->valid || !use_valid_prop){
+                if(never){
                     if(check_parola(T->key)){
                         counter++;
-                        T->valid = true;
+
+                        ptr_node_tree new = (ptr_node_tree) malloc(sizeof(tree_node_t));
+
+                        new->p = NULL;
+                        new->right = NULL;
+                        new->left = NULL;
+                        new->red = true;
+                        new->key = T->key;
+
+                        tree_insert(filtered_tree, new);
+                    }
+                } else {
+                    if(check_parola(T->key)){
+                        counter++;
                     } else {
-                        T->valid = false;
+                        if(!never){
+                            stack_push(&stack_del, T);
+                        }
                     }
                 }
 
@@ -583,16 +623,25 @@ int check_albero(ptr_node_tree T, bool use_valid_prop){
     }
 
 
+    if(!never){
+        ptr_node_tree del = stack_pop(&stack_del);
+        while(del != NULL){
+            free(tree_delete(filtered_tree, del));
+            del = stack_pop(&stack_del);
+        }
+    }
+
+
     return counter;
 }
 
-void stampa_albero_inorder(ptr_node_tree T, bool use_valid_prop){
-    if(T != tree->nil){
-        stampa_albero_inorder(T->left, use_valid_prop);
+void stampa_albero_inorder(ptr_tree TREE, ptr_node_tree T){
+    if(T != TREE->nil){
+        stampa_albero_inorder(TREE, T->left);
 
-        if(T->valid || !use_valid_prop) print(T->key);
+        print(T->key);
 
-        stampa_albero_inorder(T->right, use_valid_prop);
+        stampa_albero_inorder(TREE, T->right);
     }
 }
 
@@ -621,4 +670,116 @@ int read_integer(){
     }
 
     return res;
+}
+
+ptr_node_tree tree_minimum(ptr_tree T, ptr_node_tree x){
+    while(x->left != T->nil){
+        x = x->left;
+    }
+
+    return x;
+}
+
+ptr_node_tree tree_successor(ptr_tree T, ptr_node_tree x){
+    if(x->right != T->nil){
+        return tree_minimum(T, x->right);
+    }
+
+    ptr_node_tree y = x->p;
+    while(y != T->nil && x == y->right){
+        x = y;
+        y = y->p;
+    }
+
+    return y;
+}
+
+void tree_delete_fixup(ptr_tree T, ptr_node_tree x){
+    ptr_node_tree w;
+    if(x->red || x->p == T->nil){
+        x->red = false;
+    } else if(x == x->p->left) {
+        w = x->p->right;
+        if(w->red){
+            w->red = false;
+            x->p->red = true;
+            left_rotate(T, x->p);
+            w = x->p->right;
+        }
+
+        if(w->left->red == false && w->right->red == false){
+            w->red = true;
+            tree_delete_fixup(T, x->p);
+        } else {
+            if(w->right->red == false){
+                w->left->red = false;
+                w->red = true;
+                right_rotate(T, w);
+                w = x->p->right;
+            }
+            w->red = x->p->red;
+            x->p->red = false;
+            w->right->red = false;
+            left_rotate(T, x->p);
+        }
+    } else {
+        w = x->p->left;
+        if(w->red){
+            w->red = false;
+            x->p->red = true;
+            right_rotate(T, x->p);
+            w = x->p->left;
+        }
+
+        if(w->left->red == false && w->right->red == false){
+            w->red = true;
+            tree_delete_fixup(T, x->p);
+        } else {
+            if(w->left->red == false){
+                w->right->red = false;
+                w->red = true;
+                left_rotate(T, w);
+                w = x->p->left;
+            }
+            w->red = x->p->red;
+            x->p->red = false;
+            w->left->red = false;
+            right_rotate(T, x->p);
+        }
+    }
+}
+
+ptr_node_tree tree_delete(ptr_tree T, ptr_node_tree z) {
+    ptr_node_tree x, y;
+    if(z->left == T->nil || z->right == T->nil){
+        y = z;
+    } else {
+        y = tree_successor(T, z);
+    }
+
+    if(y->left != T->nil){
+        x = y->left;
+    } else {
+        x = y->right;
+    }
+
+    x->p = y->p;
+
+    if(y->p == T->nil){
+        T->root = x;
+    } else if(y == y->p->left){
+        y->p->left = x;
+    } else {
+        y->p->right = x;
+    }
+
+    if(y != z){
+        z->key = y->key;
+    }
+
+    if(y->red == false){
+        tree_delete_fixup(T, x);
+    }
+
+    return y;
 }
