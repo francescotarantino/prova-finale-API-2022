@@ -19,6 +19,12 @@ typedef struct {
 typedef rb_tree_t *ptr_tree;
 ptr_tree tree;
 
+typedef struct nodo_stack {
+    ptr_node_tree key;
+    struct nodo_stack *prev;
+} nodo_stack_t;
+typedef nodo_stack_t *ptr_nodo_stack;
+
 ptr_tree filtered_tree;
 
 char* lettere_esatte;
@@ -46,12 +52,18 @@ void aggiungi_lista_inorder(char*);
 void print(char*);
 void print_integer(int x);
 int read_integer();
+void add_to_filtered(char*);
+ptr_node_tree stack_pop(ptr_nodo_stack*);
 
 ptr_node_tree tree_delete(ptr_tree, ptr_node_tree);
 
 int k;
 int number_of_words = 0;
-#define CHUNK 3000
+#define CHUNK 10000
+
+#define CHUNK_F 10000
+int i_filtered = CHUNK_F;
+ptr_nodo_stack memoria_filtree = NULL;
 
 char* ptr;
 int i_leggi = CHUNK;
@@ -134,15 +146,7 @@ bool leggi_parole(const bool check){
         // end check vincoli'2
 
         if(check && add) {
-            ptr_node_tree new = (ptr_node_tree) malloc(sizeof(tree_node_t));
-
-            new->p = NULL;
-            new->right = NULL;
-            new->left = NULL;
-            new->red = true;
-            new->key = ptr;
-
-            tree_insert(filtered_tree, new);
+            add_to_filtered(ptr);
         }
 
         i_leggi++;
@@ -309,6 +313,13 @@ void nuova_partita(){
 
     free(lettere_esatte);
     free(non_qui);
+    free(filtered_tree->nil);
+    free(filtered_tree);
+
+    while(memoria_filtree != NULL){
+        free(stack_pop(&memoria_filtree));
+        i_filtered = CHUNK_F;
+    }
 }
 
 int main(){
@@ -547,11 +558,6 @@ ptr_node_tree tree_predecessor(ptr_tree T, ptr_node_tree x){
     return y;
 }
 
-typedef struct nodo_stack {
-    ptr_node_tree key;
-    struct nodo_stack *prev;
-} nodo_stack_t;
-typedef nodo_stack_t *ptr_nodo_stack;
 ptr_nodo_stack stack = NULL;
 
 void stack_push(ptr_nodo_stack* y, ptr_node_tree x){
@@ -597,15 +603,7 @@ int check_albero(ptr_tree TREE, ptr_node_tree T, bool never){
                     if(check_parola(T->key)){
                         counter++;
 
-                        ptr_node_tree new = (ptr_node_tree) malloc(sizeof(tree_node_t));
-
-                        new->p = NULL;
-                        new->right = NULL;
-                        new->left = NULL;
-                        new->red = true;
-                        new->key = T->key;
-
-                        tree_insert(filtered_tree, new);
+                        add_to_filtered(T->key);
                     }
                 } else {
                     if(check_parola(T->key)){
@@ -626,7 +624,7 @@ int check_albero(ptr_tree TREE, ptr_node_tree T, bool never){
     if(!never){
         ptr_node_tree del = stack_pop(&stack_del);
         while(del != NULL){
-            free(tree_delete(filtered_tree, del));
+            tree_delete(filtered_tree, del);
             del = stack_pop(&stack_del);
         }
     }
@@ -782,4 +780,25 @@ ptr_node_tree tree_delete(ptr_tree T, ptr_node_tree z) {
     }
 
     return y;
+}
+
+void add_to_filtered(char* add){
+    ptr_node_tree new;
+    if(i_filtered == CHUNK_F){
+        new = (ptr_node_tree) malloc(CHUNK_F*sizeof(tree_node_t));
+        stack_push(&memoria_filtree, new);
+        i_filtered = 0;
+    } else {
+        new = memoria_filtree->key + i_filtered;
+    }
+
+    new->p = NULL;
+    new->right = NULL;
+    new->left = NULL;
+    new->red = true;
+    new->key = add;
+
+    tree_insert(filtered_tree, new);
+
+    i_filtered++;
 }
