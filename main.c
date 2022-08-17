@@ -3,6 +3,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define LIMIT_LISTA 250000
+typedef struct node_list {
+    char* key;
+    struct node_list *next;
+} node_list_t;
+typedef node_list_t *ptr_list;
+ptr_list pointer_memory_list = NULL, list = NULL, last = NULL;
+
+
 typedef struct tree_node {
     char* key;
     struct tree_node *left;
@@ -45,8 +54,9 @@ void tree_insert(ptr_tree, ptr_node_tree);
 bool check_presenza_albero(ptr_node_tree, char*);
 enum comp string_comparison(char* x, char* y);
 bool check_parola(const char*);
-int check_albero(ptr_tree, ptr_node_tree, bool);
+int check_albero(ptr_tree, ptr_node_tree, bool, bool);
 void stampa_albero_inorder(ptr_tree, ptr_node_tree);
+int check_lista();
 void stampa_lista();
 void aggiungi_lista_inorder(char*);
 void print(char*);
@@ -69,7 +79,7 @@ ptr_nodo_stack memoria_filtree = NULL;
 char* ptr;
 int i_leggi = CHUNK;
 ptr_node_tree z_leggi = NULL;
-bool leggi_parole(const bool check){
+bool leggi_parole(const bool check, const bool use_list){
     int i, j;
     bool add;
 
@@ -147,7 +157,11 @@ bool leggi_parole(const bool check){
         // end check vincoli'2
 
         if(check && add) {
-            add_to_filtered(ptr);
+            if(use_list){
+                aggiungi_lista_inorder(ptr);
+            } else {
+                add_to_filtered(ptr);
+            }
         }
 
         i_leggi++;
@@ -157,14 +171,18 @@ bool leggi_parole(const bool check){
 }
 
 void nuova_partita(){
-    filtered_tree = (ptr_tree) malloc(sizeof(rb_tree_t));
-    filtered_tree->nil = (ptr_node_tree) malloc(sizeof(tree_node_t));
-    filtered_tree->nil->left = NULL;
-    filtered_tree->nil->right = NULL;
-    filtered_tree->nil->p = NULL;
-    filtered_tree->nil->red = false;
-    filtered_tree->nil->key = NULL;
-    filtered_tree->root = filtered_tree->nil;
+    bool use_list = number_of_words < LIMIT_LISTA;
+
+    if(!use_list){
+        filtered_tree = (ptr_tree) malloc(sizeof(rb_tree_t));
+        filtered_tree->nil = (ptr_node_tree) malloc(sizeof(tree_node_t));
+        filtered_tree->nil->left = NULL;
+        filtered_tree->nil->right = NULL;
+        filtered_tree->nil->p = NULL;
+        filtered_tree->nil->red = false;
+        filtered_tree->nil->key = NULL;
+        filtered_tree->root = filtered_tree->nil;
+    }
 
     char p[k+1], r[k+1], res[k+1];
     res[k] = '\0';
@@ -203,13 +221,17 @@ void nuova_partita(){
                 if(never){
                     stampa_albero_inorder(tree, tree->root);
                 } else {
-                    stampa_albero_inorder(filtered_tree, filtered_tree->root);
+                    if(use_list){
+                        stampa_lista();
+                    } else {
+                        stampa_albero_inorder(filtered_tree, filtered_tree->root);
+                    }
                 }
                 j--;
             } else { // inserisci
                 while(getchar_unlocked() != '\n');
 
-                leggi_parole(!never);
+                leggi_parole(!never, use_list);
                 j--;
             }
         } else {
@@ -290,9 +312,13 @@ void nuova_partita(){
 
                     if(never) {
                         never = false;
-                        i = check_albero(tree, tree->root, true);
+                        i = check_albero(tree, tree->root, true, use_list);
                     } else {
-                        i = check_albero(filtered_tree, filtered_tree->root, false);
+                        if(use_list){
+                            i = check_lista();
+                        } else {
+                            i = check_albero(filtered_tree, filtered_tree->root, false, use_list);
+                        }
                     }
 
                     print(res);
@@ -314,12 +340,19 @@ void nuova_partita(){
 
     free(lettere_esatte);
     free(non_qui);
-    free(filtered_tree->nil);
-    free(filtered_tree);
+    if(use_list){
+        free(pointer_memory_list);
+        pointer_memory_list = NULL;
+        list = NULL;
+        last = NULL;
+    } else {
+        free(filtered_tree->nil);
+        free(filtered_tree);
 
-    while(memoria_filtree != NULL){
-        free(stack_pop(&memoria_filtree));
-        i_filtered = CHUNK_F;
+        while(memoria_filtree != NULL){
+            free(stack_pop(&memoria_filtree));
+            i_filtered = CHUNK_F;
+        }
     }
 }
 
@@ -335,10 +368,10 @@ int main(){
 
     k = read_integer();
 
-    if(leggi_parole(false)){
+    if(leggi_parole(false, false)){
         nuova_partita();
     } else {
-        leggi_parole(false);
+        leggi_parole(false, false);
     }
 
     char x = getchar_unlocked();
@@ -348,7 +381,7 @@ int main(){
             nuova_partita();
         } else if(x == 'i'){
             while(getchar_unlocked() != '\n');
-            leggi_parole(false);
+            leggi_parole(false, false);
         }
 
         x = getchar_unlocked();
@@ -559,7 +592,7 @@ ptr_node_tree tree_predecessor(ptr_tree T, ptr_node_tree x){
     return y;
 }
 
-int check_albero(ptr_tree TREE, ptr_node_tree T, bool never){
+int check_albero(ptr_tree TREE, ptr_node_tree T, bool never, bool use_list){
     int counter = 0;
     ptr_nodo_stack stack_del = NULL;
     ptr_nodo_stack stack = NULL;
@@ -567,7 +600,7 @@ int check_albero(ptr_tree TREE, ptr_node_tree T, bool never){
     bool go = true;
 
     while(go){
-        if(T != tree->nil && T != filtered_tree->nil){
+        if(T != TREE->nil){
             stack_push(&stack, T);
             T = T->left;
         } else {
@@ -580,7 +613,23 @@ int check_albero(ptr_tree TREE, ptr_node_tree T, bool never){
                     if(check_parola(T->key)){
                         counter++;
 
-                        add_to_filtered(T->key);
+                        if(use_list){
+                            if(list == NULL){
+                                list = (ptr_list) malloc(sizeof(node_list_t) * number_of_words);
+                                pointer_memory_list = list;
+
+                                list->key = T->key;
+                                list->next = NULL;
+                                last = list;
+                            } else {
+                                last->next = last + 1;
+                                last->next->key = T->key;
+                                last->next->next = NULL;
+                                last = last->next;
+                            }
+                        } else {
+                            add_to_filtered(T->key);
+                        }
                     }
                 } else {
                     if(check_parola(T->key)){
@@ -801,4 +850,55 @@ ptr_node_tree stack_pop(ptr_nodo_stack* x){
     }
 
     return to_return;
+}
+
+void aggiungi_lista_inorder(char* word){
+    ptr_list x = list, prev = NULL;
+
+    while(x != NULL && string_comparison(x->key, word) == minore){
+        prev = x;
+        x = x->next;
+    }
+
+    if(prev == NULL){
+        prev = list;
+        list = (ptr_list) malloc(sizeof(node_list_t));
+        list->key = word;
+        list->next = prev;
+    } else {
+        prev->next = (ptr_list) malloc(sizeof(node_list_t));
+        prev->next->key = word;
+        prev->next->next = x;
+    }
+}
+int check_lista(){
+    ptr_list x = list, y = NULL;
+    int i = 0;
+
+    while(x != NULL){
+        if(check_parola(x->key)){
+            i++;
+
+            y = x;
+        } else {
+            if(y == NULL){
+                list = x->next;
+            } else {
+                y->next = x->next;
+            }
+        }
+
+        x = x->next;
+    }
+
+    return i;
+}
+void stampa_lista(){
+    ptr_list x = list;
+
+    while(x != NULL){
+        print(x->key);
+
+        x = x->next;
+    }
 }
